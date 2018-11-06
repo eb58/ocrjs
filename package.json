@@ -1,0 +1,16 @@
+{
+   "name": "OCR",
+   "version": "1.0.0",
+   "keywords": [
+      "util",
+      "functional",
+      "server",
+      "client",
+      "browser"
+   ],
+   "author": "A403163",
+   "contributors": [],
+   "dependencies": {
+      "underscore": "1.9.1"
+   }
+}
