@@ -4,7 +4,7 @@ module.exports = (db) => {
 
     const sqr = x => x * x;
 
-    const squaredDistance = (v1, v2, minDist) => {
+    const distance = (v1, v2, minDist) => {
         let res = 0;
         for (let i = 0; i < v1.length; i++) {
             res += sqr(v1[i] - v2[i]);
@@ -18,7 +18,7 @@ module.exports = (db) => {
         for (let i = 0; i < nDigits; i++) {
             const dbi = db[i];
             for (let j = 0; j < dbi.length; j++) {
-                const dist = squaredDistance(v, dbi[j], res.minDist);
+                const dist = distance(v, dbi[j], res.minDist);
                 if (dist < res.minDist) {
                     res.minDist = dist;
                     res.digit = i;
