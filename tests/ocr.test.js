@@ -13,7 +13,7 @@ const run = (n,counter) => {
    });
 }
 
-test('first test', () => {^
+test('first test', () => {
    expect(1 + 2).toBe(3);
 });
 
