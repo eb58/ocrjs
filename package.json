@@ -1,16 +1,19 @@
 {
-   "name": "OCR",
+   "name": "OCRJS",
    "version": "1.0.0",
    "keywords": [
-      "util",
-      "functional",
-      "server",
-      "client",
-      "browser"
+      "ocr"
    ],
-   "author": "A403163",
+   "scripts": {
+      "test": "jest",
+      "testWatch": "jest --watch"
+   },
+   "author": "eb",
    "contributors": [],
    "dependencies": {
       "underscore": "1.9.1"
+   },
+   "devDependencies": {
+      "jest": "^23.6.0"
    }
 }
