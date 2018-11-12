@@ -12,33 +12,46 @@ and open the template in the editor.
       <script src="vendor/underscore-1.8.3//underscore.min.js"></script>
       <script src="vendor/jQuery-1.11.3/jquery.js"></script>
       <script src="./data/dbjs/dbm6x4.js"></script>
+      <script src="./data/dbjs/dbm8x6.js"></script>
       <script src="./data/dbjs/dbverify6x4.js"></script>
+      <script src="./data/dbjs/dbverify8x6.js"></script>
       <script src="./js/ocr.js"></script>
       <script>
-         
-         const ocrdb = ocr(dbm6x4);
-         
+         const small = false;
+         const db = small ? dbm6x4 : dbm8x6;
+         const dbverify = small ? dbverify6x4 : dbverify8x6;
+
+         const ocrdb = ocr(db);
+
          const run = (n, counter) => {
-            dbverify6x4[n].forEach(checkDigit => {
-               const guessOk = ocrdb.findNearestDigit(checkDigit).best.digit === n
+            dbverify[n].slice(0, 10).forEach(digit => {
+               const res = ocrdb.findNearestDigit(digit)
+               const guessOk = res.best.digit === n
+
                counter.all++;
                counter.ok += guessOk;
                counter.nok += !guessOk;
+
+               if (!guessOk) {
+                  console.log( !guessOk?'***' : '   ', n, JSON.stringify(res),  '\n', ocrdb.dumpDigit(digit));
+               }
             });
+         }
+         
+         const runAll = () => {
+            const counter = {ok: 0, nok: 0, all: 0};
+
+            _.range(10).forEach(n => run(n, counter))
+
+            const quot = counter.ok / counter.all;
+            console.log(counter, quot);
+            
          }
 
 
          $(document).ready(() => {
-            $('#btnTest').on('click', () => {
-               
-               const counter = {ok: 0, nok: 0, all: 0};
-
-               _.range(10).forEach(n => run(n, counter))
-
-               const quot = counter.ok / counter.all;
-               console.log(counter, quot);
-
-            })
+            runAll();
+            $('#btnTest').on('click', runAll)
          })
       </script>
 
