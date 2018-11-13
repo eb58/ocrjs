@@ -12,6 +12,7 @@
    "contributors": [],
    "dependencies": {
       "napajs": "^0.2.3",
+      "pngjs-image": "^0.11.7",
       "underscore": "^1.9.1"
    },
    "devDependencies": {

@@ -2,6 +2,12 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group/>
+        <group>
+            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/package.json</file>
+            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/.gitignore</file>
+            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/public_html/js/util/mnist.js</file>
+            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/public_html/data/mnist/imgs/img-6-9999.png</file>
+            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/public_html/data/mnist/imgs/img-5-9998.png</file>
+        </group>
     </open-files>
 </project-private>
