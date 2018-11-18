@@ -1,6 +1,6 @@
 const _ = require('underscore');
 const dim = '6x4';
-const db2verify = require('../data/dbjs/dbverify' + dim);
+const db2verify = require('../public/data/dbjs/dbverify' + dim);
 const db = require('../data/dbjs/dbm' + dim);
 const ocr = require('../ocr')(db);
 
@@ -20,7 +20,7 @@ test('first test', () => {
 test('first ocr', () => {
    const counter = {ok: 0, nok: 0, all: 0};
    
-   _.range(10).forEach(n =>run(n,counter) )
+   _.range(10).forEach(n => run(n,counter) )
    
    const quot = counter.ok / counter.all;
    console.log(counter, quot);
