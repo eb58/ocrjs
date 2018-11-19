@@ -1,3 +1,5 @@
 /node_modules
 /public_html/data/mnist/imgs/
 /data/mnist/imgs
+/data/DB/
+/data/dbjs/

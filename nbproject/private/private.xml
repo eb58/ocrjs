@@ -3,8 +3,11 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/package.json</file>
-            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/public/js/main.js</file>
+            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/js/ocrdb.js</file>
+            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/public/vendor/underscore-1.8.3/underscore.min.js</file>
+            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/js/ocr.js</file>
+            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/js/main.js</file>
+            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/js/ebimg.js</file>
         </group>
     </open-files>
 </project-private>

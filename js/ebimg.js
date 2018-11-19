@@ -29,13 +29,14 @@ module.exports = (function () {
 
    let scale = function (h2, w2) {
       const MM = h2 * w2 / this.img.length;
-      const ximg = _.range(h2 * w2).map(() => 0);
+      let ximg = _.range(h2 * w2).map(() => 0);
       for (let r = 0; r < this.h; r++) {
          let sr = Math.floor(r * h2 / this.h) * w2;
          let rr = this.w * r;
          for (let c = 0; c < this.w; c++) {
-            if (this.img[c + rr] > 1) {
-               ximg[Math.floor(sr + c * w2 / this.w)]++;
+            if (this.img[c + rr] > 0) {
+               ximg[Math.floor(sr + c * w2 / this.w)].n = ximg[Math.floor(sr + c * w2 / this.w)].n ? ximg[Math.floor(sr + c * w2 / this.w)].n++ : 1;
+               ximg[Math.floor(sr + c * w2 / this.w)] +=  this.img[c + rr]
             }
          }
       }
@@ -45,6 +46,7 @@ module.exports = (function () {
 //            ximg[n] = Math.floor(ximg[n] / MM);
 //      }
 //      console.log('scale', ximg, MM)
+      ximg = ximg.map(x => x.n ? x/x.n : x);
       this.h = h2;
       this.w = w2;
       this.img = ximg;

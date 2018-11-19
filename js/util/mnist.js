@@ -4,13 +4,13 @@ const PNGImage = require('pngjs-image');
 
 const DIM = 28;
 const DIMSQR = DIM * DIM;
+const mnistpath = '../../data/mnist/'
 
 
+const readMnistDBx = function () {
 
-const readMnistDB = function () {
-
-   const lbl = fs.readFileSync('public_html/data/mnist/t10k-labels.idx1-ubyte').slice(8);
-   const imgs = fs.readFileSync('public_html/data/mnist/t10k-images.idx3-ubyte').slice(16);
+   const lbls = fs.readFileSync(mnistpath + 't10k-labels.idx1-ubyte').slice(8);
+   const imgs = fs.readFileSync(mnistpath + 't10k-images.idx3-ubyte').slice(16);
 
    const creImg = (arr) => {
       var img = PNGImage.createImage(DIM, DIM);
@@ -22,30 +22,38 @@ const readMnistDB = function () {
       return img;
    };
 
-   function f(imgarr, n) {
+   function extractImages(imgarr, n) {
       if (n >= imgarr.length)
          return;
 
-      const path = 'public_html/data/mnist/imgs/img-' + lbl[n] + '-' + n + '.png'
-      console.log('PATH', path)
-
-      imgarr[n].writeImage('public_html/data/mnist/imgs/img-' + lbl[n] + '-' + n + '.png', (err) => {
+      imgarr[n].writeImage(mnistpath + 'imgs/img-' + lbls[n] + '-' + n + '.png', (err) => {
          err && console.log('Not written to the file' + err);
-         console.log('AAAAAA', n)
-         f(imgarr, n + 1);
+         extractImages(imgarr, n + 1);
       });
    }
 
    const imgarr = [];
-   for (let x = 0; x < lbl.length; x++) {
+   for (let x = 0; x < lbls.length; x++) {
       imgarr.push(creImg(imgs.slice(x * DIMSQR, (x + 1) * DIMSQR)));
    }
    console.log(imgarr.length, imgarr[0]);
 
-   f(imgarr, 0);
+   extractImages(imgarr, 0);
 
 }
 
-//readMnistDB(0,5000);
+const readMnistDB = function () {
+
+   const lbls = fs.readFileSync(mnistpath + 't10k-labels.idx1-ubyte').slice(8);
+   const imgs = fs.readFileSync(mnistpath + 't10k-images.idx3-ubyte').slice(16);
+   const db = _.range(10).reduce( (acc,i) => {acc[i] = []; return acc; }, {});
+   
+   for( let i = 0; i<lbls; i++ ){
+      db[lbl[i]].push(imgs.slice(i * DIMSQR, (i + 1) * DIMSQR))
+   }
+   return db
+
+}
+
 readMnistDB();
 
