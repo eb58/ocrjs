@@ -27,8 +27,8 @@ const mnistdbt10k = ocrdb.generateDBFromMnist('data/mnist/', 't10k');
 
 
 PNGImage.readImage('./data/mnist/imgs/img-0-1001.png', (err, image) => {
-   const img = ebimg.init(image).cropGlyph().dump().scale(10, 10).dump()
-   console.log(ocr(db).findNearestDigit(img.getImg()))
+   const img = ebimg.init(image).cropGlyph().dump().scale(6, 4).dump()
+   //console.log(ocr(db).findNearestDigit(img.getImg()))
 });
 
 0 && sharp('./data/mnist/imgs/img-0-10.png')
