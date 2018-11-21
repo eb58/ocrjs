@@ -11,7 +11,7 @@
    "author": "eb",
    "contributors": [],
    "dependencies": {
-      "napajs": "^0.2.3",
+      "mkdirp": "^0.5.1",
       "pngjs-image": "^0.11.7",
       "sharp": "^0.21.0",
       "underscore": "^1.9.1"

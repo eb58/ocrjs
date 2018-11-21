@@ -5,7 +5,7 @@ const ocr = (db) => {
       48: {rows: 8, cols: 6}
    };
 
-   const DIM = DIMS[db[0][0].length]
+   const DIM = DIMS[db[0][0].length];
    const NDIGITS = Object.keys(db).length;
 
    const sqr = x => x * x;
@@ -30,7 +30,7 @@ const ocr = (db) => {
          }
          return res;
       }
-   }
+   };
 
    const updateResult = (res, digit, dist) => {
       if (dist >= res.secbest.dist)
@@ -47,7 +47,7 @@ const ocr = (db) => {
       if (digit !== res.best.digit) {
          res.secbest = {digit, dist};
       }
-   }
+   };
 
 
    const findNearestDigit = (v) => {

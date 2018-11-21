@@ -20,7 +20,7 @@ const ocrdb = (function () {
       return img;
    };
 
-   const generateDBFromMnist = (mnistpath, prefix) => {
+   const generateDBFromMnist = (mnistpath, prefix, dimr, dimc, cb) => {
       mnistpath = mnistpath || 'data/mnist/';
 
       const labels = fs.readFileSync(mnistpath + prefix + '-labels.idx1-ubyte').slice(8); // cf. structur of mnist
@@ -28,28 +28,32 @@ const ocrdb = (function () {
 
       this.db = _.range(10).reduce((acc, i) => (acc[i] = [], acc), {});
       for (let i = 0; i < labels.length; i++) {
-         this.db[labels[i]].push(images.slice(i * DIMSQR, (i + 1) * DIMSQR));
+         const imagearr = images.slice(i * DIMSQR, (i + 1) * DIMSQR);//.map(b => 255-b);
+         const image = ebimg.init(imagearr, DIM, DIM).cropGlyph().scale(dimr, dimc);
+         // console.log('Digit', labels[i]);  image.dump()
+         this.db[labels[i]].push( image.getImg());
          // i === 0 && console.log('A', i, labels[i], [...this.db[labels[i]][0]].join(' '))
       }
+      cb(this.db);
       return this;
    };
 
    const writeImagesToFilesytem = (path) => {
+      require('mkdirp').sync(path)
 
       function extractImages(imgarr, c, n) {
-         n < imgarr.length && getAsImage(imgarr[n]).writeImage(path + 'imgs/img-' + c + '-' + n + '.png', (err) => {
+         n < imgarr.length && getAsImage(imgarr[n]).writeImage(path + '/img-' + c + '-' + n + '.png', (err) => {
             err && console.log('Not written to the file' + err);
             extractImages(imgarr, c, n + 1);
          });
       }
 
       Object.keys(this.db).forEach(n => extractImages(this.db[n], n, 0));
-      //const n = 0;      extractImages(this.db[n], n, 0);
    };
 
    const generateEBDB = (path, dimr, dimc, cb) => {
       let ebdb = {dimr, dimc};
-      ebdb = _.extend({},  ebdb, _.range(10).reduce((acc, i) => (acc[i] = [], acc), {}));
+      ebdb = _.extend({}, ebdb, _.range(10).reduce((acc, i) => (acc[i] = [], acc), {}));
 
 
       function extractImages(path, listOfFiles, n) {
@@ -57,7 +61,7 @@ const ocrdb = (function () {
             PNGImage.readImage(path + '/' + listOfFiles[n], (err, image) => {
                err && console.log('error', err);
                const digit = listOfFiles[n].split('-')[1];
-               ebdb[digit].push({arr:ebimg.init(image).cropGlyph().scale(dimr,dimc).getImg(),name:listOfFiles[n]});
+               ebdb[digit].push({arr: ebimg.initFromPNGImage(image).cropGlyph().scale(dimr, dimc).getImg(), name: listOfFiles[n]});
                extractImages(path, listOfFiles, n + 1);
             });
          } else {

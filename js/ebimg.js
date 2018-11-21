@@ -5,7 +5,14 @@ module.exports = (function () {
    let h;
    let w;
 
-   let init = function (image) {
+   const init = function (img,w,h) {
+      this.img = img;
+      this.h = h;
+      this.w = w;
+      return this;
+   };
+
+   const initFromPNGImage = function (image) {
       let [img, w, h] = [[], image.getWidth(), image.getHeight()];
       for (let r = 0; r < w * h; r++) {
          img.push(255 - image.getGrayScaleAtIndex(r));
@@ -16,17 +23,17 @@ module.exports = (function () {
       return this;
    };
 
-   let dump = function () {
+   const dump = function () {
       const res = [];
       for (i = 0; i < this.h; i++) {
-         const line = this.img.slice(i * this.w, (i + 1) * this.w);
+         const line = this.img.img.slice(i * this.w, (i + 1) * this.w);
          const val = res.push(line.map(x => x ? ('   ' + x).substr(-3) : '   '));
       }
       res.map(line => console.log(line.join(' ')));
       return this;
    };
 
-   let scale = function (h2, w2) {
+   const scale = function (h2, w2) {
       const MM = h2 * w2 / this.img.length;
       let ximg = _.range(h2 * w2).map(() => 0);
       let nimg = _.range(h2 * w2).map(() => 0);
@@ -41,14 +48,14 @@ module.exports = (function () {
             }
          }
       }
-      ximg = ximg.map((x, idx) => nimg[idx] === 0 ? x : Math.floor(x / nimg[idx]));
+      ximg = ximg.map((x, idx) => nimg[idx] === 0 ? x : Math.floor(x / nimg[idx]/2));
       this.h = h2;
       this.w = w2;
       this.img = ximg;
       return this;
    };
 
-   cropGlyph = function () {
+   const cropGlyph = function () {
       const coord = (idx, w) => ({r: Math.floor(idx / w), c: idx % w});
       let [minr, minc, maxr, maxc] = [this.h - 1, this.w - 1, 0, 0];
       this.img.forEach((x, idx) => {
@@ -75,6 +82,7 @@ module.exports = (function () {
 
    return {
       init,
+      initFromPNGImage,
       dump,
       scale,
       cropGlyph,
