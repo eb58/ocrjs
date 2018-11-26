@@ -21,7 +21,7 @@ const convertOldDb2Json = function (name, dimr, dimc) {
 
 };
 
-convertOldDb2Json('m6x4');
-convertOldDb2Json('m8x6');
-convertOldDb2Json('verify6x4');
-convertOldDb2Json('verify8x6');
+convertOldDb2Json('dbm-train-6x4');
+convertOldDb2Json('dbm-train-8x6');
+convertOldDb2Json('dbm-test-6x4');
+convertOldDb2Json('dbm-test-8x6');
