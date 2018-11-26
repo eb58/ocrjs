@@ -5,8 +5,11 @@
         <group>
             <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/js/ocrdb.js</file>
             <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/js/ocr.js</file>
+            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/data/dbjs/ebdb-test-6x4.js</file>
             <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/js/main.js</file>
-            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/js/ebimg.js</file>
+            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/js/util/convertOldDb2Json.js</file>
+            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/tests/ocr.test.js</file>
+            <file>file:/C:/Users/a403163/Documents/NetBeansProjects/JavascriptProjekte/ocrjs/js/util/mnist.js</file>
         </group>
     </open-files>
 </project-private>
