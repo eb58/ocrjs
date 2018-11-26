@@ -6,12 +6,14 @@ const convertOldDb2Json = function (name, dimr, dimc) {
 
    _.range(10).forEach(n => {
 
-      const content = fs.readFileSync('./data/DB/' + name + '/' + n + '.db', 'utf8');
+      const content = fs.readFileSync('./data/ebdb/' + name + '/' + n + '.db', 'utf8');
 
       db[n] = content
               .split('\n') // split into lines
               .filter(line => line.length > 0) // filter empty lines 
-              .map((line) => line.trim().replace(/[ ]+/g, ',').split(',').map(n => Number(n))); // make array from string 
+              .map(line => { 
+                 return { img: line.trim().replace(/[ ]+/g, ',').split(',').map(n => Number(n)), idxmnist:0 }; 
+               }); // make array from string 
 
    });
 

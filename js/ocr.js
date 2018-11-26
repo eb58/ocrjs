@@ -1,13 +1,5 @@
-const ocr = (db) => {
-
-   const DIMS = {
-      24: {rows: 6, cols: 4},
-      48: {rows: 8, cols: 6}
-   };
-
-   const DIM = DIMS[db[0][0].length];
-   const NDIGITS = Object.keys(db).length;
-
+const ocr = db => {
+   
    const sqr = x => x * x;
    const abs = x => x > 0 ? x : -x;
 
@@ -32,42 +24,37 @@ const ocr = (db) => {
       }
    };
 
-   const updateResult = (res, digit, dist) => {
-      if (dist >= res.secbest.dist)
-         return;
-
+   const updateResult = (res, digit, idxmnist, dist) => {
       if (dist < res.best.dist) {
-         if (digit === res.best.digit) {
-            res.best.dist = dist;
-         } else {
-            res.secbest = res.best;
-            res.best = {digit, dist};
-         }
-      }
-      if (digit !== res.best.digit) {
-         res.secbest = {digit, dist};
+         res.secbest = Object.assign({}, res.best);
+         res.best = {digit, dist, idxmnist};
+      } else if (dist < res.secbest.dist) {
+         res.secbest = {digit, dist, idxmnist};
       }
    };
 
-
-   const findNearestDigit = (v) => {
+   const findNearestDigit = (v, distfct) => {
       const res = {
-         best: {digit: -1, dist: 10000000},
-         secbest: {digit: -1, dist: 10000000}
+         best: {digit: -1, dist: 10000000, idxmmist: -1},
+         secbest: {digit: -1, dist: 10000000, idxmmist: -1}
       };
 
-      for (let digit = 0; digit < NDIGITS; digit++) {
+      Object.keys(db).forEach(digit => {
+         digit = Number(digit);
          const dbi = db[digit];
          for (let j = 0; j < dbi.length; j++) {
-            updateResult(res, digit, distFcts.squaredDistance(v, dbi[j], res.best.dist));
+            updateResult(res, digit, dbi[j].idxmnist, distfct(v.img, dbi[j].img, res.best.dist));
          }
-      }
+      })
       return res;
    };
-
+   
+   const findNearestDigitSqrDist = v => findNearestDigit(v, distFcts.squaredDistance);
+   const findNearestDigitAbsDist = v => findNearestDigit(v, distFcts.absDistance);
 
    return {
-      findNearestDigit
+      findNearestDigitSqrDist,
+      findNearestDigitAbsDist
    };
 
 };

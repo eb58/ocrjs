@@ -49,11 +49,11 @@ const readMnistDB = function () {
    const db = _.range(10).reduce( (acc,i) => {acc[i] = []; return acc; }, {});
    
    for( let i = 0; i<lbls; i++ ){
-      db[lbl[i]].push(imgs.slice(i * DIMSQR, (i + 1) * DIMSQR))
+      db[lbls[i]].push(imgs.slice(i * DIMSQR, (i + 1) * DIMSQR));
    }
-   return db
+   return db;
 
-}
+};
 
 readMnistDB();
 
