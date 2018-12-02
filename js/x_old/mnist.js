@@ -6,6 +6,29 @@ const DIM = 28;
 const DIMSQR = DIM * DIM;
 const mnistpath = '../../data/mnist/'
 
+   const writeImagesToFilesytem = (path) => {
+      require('mkdirp').sync(path);
+
+      function getAsImage(arr) {
+         var img = PNGImage.createImage(DIM, DIM);
+         for (let i = 0; i < arr.length; i++) {
+            const pix = 255 - arr[i];
+            const [r, c] = [i % DIM, Math.floor(i / DIM)];
+            img.setAt(r, c, {red: pix, green: pix, blue: pix, alpha: 255});
+         }
+         return img;
+      }
+
+
+      function extractImages(imgarr, c, n) {
+         n < imgarr.length && getAsImage(imgarr[n]).writeImage(path + '/img-' + c + '-' + n + '.png', (err) => {
+            err && console.log('Not written to the file' + err);
+            extractImages(imgarr, c, n + 1);
+         });
+      }
+
+      Object.keys(this.db).forEach(n => extractImages(this.db[n], n, 0));
+   };
 
 const readMnistDBx = function () {
 

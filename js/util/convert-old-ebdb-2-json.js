@@ -13,7 +13,7 @@ const convertOldDb2Json = function (name, dimr, dimc) {
               .filter(line => line.length > 0) // filter empty lines 
               .map(line => { 
                  return { img: line.trim().replace(/[ ]+/g, ',').split(',').map(n => Number(n)), idxmnist:0 }; 
-               }); // make array from string 
+               }); 
 
    });
 

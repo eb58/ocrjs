@@ -1,5 +1,6 @@
 const ocr = db => {
-   
+   const _ = require('underscore');
+
    const sqr = x => x * x;
    const abs = x => x > 0 ? x : -x;
 
@@ -24,31 +25,31 @@ const ocr = db => {
       }
    };
 
-   const updateResult = (res, digit, idxmnist, dist) => {
+   const updateResult = (res, digit, dbv, dist) => {
       if (dist < res.best.dist) {
          res.secbest = Object.assign({}, res.best);
-         res.best = {digit, dist, idxmnist};
+         res.best = {digit, dist, dbv};
       } else if (dist < res.secbest.dist) {
-         res.secbest = {digit, dist, idxmnist};
+         res.secbest = {digit, dist, dbv};
       }
    };
 
    const findNearestDigit = (v, distfct) => {
       const res = {
-         best: {digit: -1, dist: 10000000, idxmmist: -1},
-         secbest: {digit: -1, dist: 10000000, idxmmist: -1}
+         best: {digit: -1, dist: 10000000},
+         secbest: {digit: -1, dist: 10000000}
       };
 
-      Object.keys(db).forEach(digit => {
+      _.range(10).forEach(digit => {
          digit = Number(digit);
          const dbi = db[digit];
          for (let j = 0; j < dbi.length; j++) {
-            updateResult(res, digit, dbi[j].idxmnist, distfct(v.img, dbi[j].img, res.best.dist));
+            updateResult(res, digit, dbi[j], distfct( v, dbi[j].img, res.best.dist));
          }
-      })
+      });
       return res;
    };
-   
+
    const findNearestDigitSqrDist = v => findNearestDigit(v, distFcts.squaredDistance);
    const findNearestDigitAbsDist = v => findNearestDigit(v, distFcts.absDistance);
 

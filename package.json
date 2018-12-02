@@ -8,7 +8,8 @@
     "start": "node js/main.js",
     "debug": "node --inspect-brk js/main.js ",
     "test": "jest",
-    "testWatch": "jest --watch"
+    "testWatch": "jest --watch",
+    "genMnistDb": "node js/util/genMnistDbs"
   },
   "author": "eb",
   "contributors": [],
