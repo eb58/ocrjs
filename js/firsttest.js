@@ -19,8 +19,8 @@ const firstTest = function (prefix, dimr, dimc) {
             if (n !== res.best.digit) {
                console.log('RES', n, JSON.stringify(res), ratio.toFixed(2), n !== res.best.digit ? '*****' : '', img.name);
                ocrimg.init(img.img, dimr, dimc).dump({values:true});
-               //ocrimg.init(myocrdbt10k.getMnistImage(imgarr.idxmnist), 28, 28).cropGlyph().dump();
-               //ocrimg.init(myocrdbtrain.getMnistImage(res.best.idxmnist), 28, 28).cropGlyph().dump();
+               //ocrimg.init(myocrdbt10k.getMnistImage(imgarr.idxmnist), 28, 28).cropglyph().dump();
+               //ocrimg.init(myocrdbtrain.getMnistImage(res.best.idxmnist), 28, 28).cropglyph().dump();
             }
             statistics.cnt++;
             statistics.ok += n === res.best.digit;

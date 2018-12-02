@@ -14,7 +14,7 @@ const firsttest = require("./firsttest");
 
 // ##################################################################################
 const traindata = "C:/Users/a403163/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/01 - Trainingsdaten/";
-const testdata  = "C:/Users/a403163/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/02 - Validierungsdaten/";
+const testdata = "C:/Users/a403163/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/02 - Validierungsdaten/";
 //const imgdata = "C:/temp/01 -Trainingsdaten/";
 
 // ocrebdb().generateEBDB( traindata, 6, 4, (db) => fs.writeFileSync(`data/dbjs/ebdb-train-6x4.js`, 'module.exports = ' + JSON.stringify(db)) );
@@ -22,21 +22,34 @@ const testdata  = "C:/Users/a403163/Google Drive/ATOS/Projekte/OCR/Data/01 - Han
 // ocrebdb().generateEBDB( traindata, 8, 6, (db) => fs.writeFileSync(`data/dbjs/ebdb-train-8x6.js`, 'module.exports = ' + JSON.stringify(db)) );
 // ocrebdb().generateEBDB( testdata, 8, 6, (db) => fs.writeFileSync(`data/dbjs/ebdb-test-8x6.js`, 'module.exports = ' + JSON.stringify(db)) );
 
-0 && PNGImage.readImage('c:/temp/scale.png', (err, image) => {
+const getOcrimg = function (image) {
+   let [img, w, h, sz] = [[], image.getWidth(), image.getHeight(), image.getWidth() * image.getHeight()];
+   for (let r = 0; r < sz; r++) {
+      img.push(image.getGrayScaleAtIndex(r) > 50 ? 1 : 0);
+   }
+   return ocrimg(img, w, h);
+};
+
+0 && PNGImage.readImage(testdata + 'img0/0_0_1__aliste_TestListenH_Neu_rechserv_region1_04_29_101_7_3042147h_1.tif.png', (err, image) => {
    err && console.log(err);
-   //ocrimg.initFromPNGImage(image).adjustBW().despeckle().cropGlyph().dump();
-   ocrimg.initFromPNGImage(image).adjustBW().despeckle().cropGlyph().scaleDown(20, 20).dump({values:true});
-   ocrimg.initFromPNGImage(image).adjustBW().despeckle().cropGlyph().scaleDown(8, 6).dump({values:true});
-   //ocrimg.initFromPNGImage(image).cropGlyph().dump()
+
+   getOcrimg(image).adjustBW().despeckle().extglyph().cropglyph().scaleDown(6, 4).dump({values: true});
 });
 
-
-PNGImage.readImage(testdata + 'img0/0_0_1__aliste_TestListenH_Neu_rechserv_region1_04_29_101_7_3042147h_1.tif.png', (err, image) => {
+PNGImage.readImage(testdata + 'img0/0_0_0__aliste_TestListenH_Neu_rechserv_region1_04_29_101_8_3042038h_1.tif.png', (err, image) => {
    err && console.log(err);
-   
+
+   getOcrimg(image).adjustBW().despeckle().cropglyph().dump().extglyph().scaleDown(6, 4).dump({values: true});
+});
+
+0 && PNGImage.readImage(testdata + 'img0/0_0_1__aliste_TestListenH_Neu_rechserv_region1_04_29_101_7_3042147h_1.tif.png', (err, image) => {
+   err && console.log(err);
+
+   const img = getOcrimg(image).adjustBW().despeckle().extglyph().cropglyph().dump().scaleDown(6, 4).dump({values: true});
+
    const dbtrain = require(`../data/dbjs/ebdb-train-6x4.js`);
-   const img = ocrimg.initFromPNGImage(image).adjustBW().despeckle().cropGlyph().dump({values:true}).scaleDown(6, 4).dump({values:true});
-   const res = ocr(dbtrain).findNearestDigitSqrDist(img.getImageArray());
+   const res = ocr(dbtrain).findNearestDigitSqrDist(img.getImgdata());
+
    console.log('RES', JSON.stringify(res));
 });
 
@@ -51,7 +64,7 @@ PNGImage.readImage(testdata + 'img0/0_0_1__aliste_TestListenH_Neu_rechserv_regio
         .toBuffer()
         .then(buf => PNGImage.loadImage(buf, (err, image) => {
               err && console.log(err)
-              const img = ocrimg.initFromPNGImage(image).adjustBW().cropGlyph().scaleDown(8, 6).dump();
+              const img = ocrimg.initFromPNGImage(image).adjustBW().cropglyph().scaleDown(8, 6).dump();
            })
         );
 0 && sharp('c:/temp/scale.tif').toFile('c:/temp/scale.png');
@@ -63,7 +76,7 @@ PNGImage.readImage(testdata + 'img0/0_0_1__aliste_TestListenH_Neu_rechserv_regio
               err && console.log(err, image);
               let img = ocrimg.initFromPNGImage(image);
               //img = img.isInverted() ? img.invert() : img;
-              img.cropGlyph().scaleDown(8, 6).dump();
+              img.cropglyph().scaleDown(8, 6).dump();
            })
         )
 

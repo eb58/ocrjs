@@ -16,7 +16,7 @@ const ocrebdb = function () {
          if (n < listOfFiles.length) {
             PNGImage.readImage(path + '/' + listOfFiles[n], (err, image) => {
                err && console.log('error', err, listOfFiles[n] );
-               ebdb[digit].push({img: ocrimg.initFromPNGImage(image).adjustBW().despeckle().cropGlyph().scaleDown(dimr, dimc).getImageArray(), name: listOfFiles[n]});
+               ebdb[digit].push({img: ocrimg.initFromPNGImage(image).adjustBW().despeckle().cropglyph().scaleDown(dimr, dimc).getImageArray(), name: listOfFiles[n]});
                extractImages(digit, path, listOfFiles, n + 1);
             });
          } else {

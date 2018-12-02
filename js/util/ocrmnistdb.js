@@ -20,7 +20,7 @@ const ocrmnistdb = function (prefix) {
       labels.forEach( (label,idx)  => {
          const image = ocrimg
                  .init(getMnistImage(idx), DIM, DIM)
-                 .cropGlyph()
+                 .cropglyph()
                  .scaleDown(dimr, dimc);
          
          db[label].push({img: image.getImageArray(), idxmnist: idx});
