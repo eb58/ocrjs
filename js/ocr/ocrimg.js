@@ -2,24 +2,22 @@ module.exports = function ebocrimg(imgdata, w, h) {
    const _ = require('underscore');
    const BLACK = 1;
    const WHITE = 0;
+   const inrange = (r, c) => r >= 0 && c >= 0 && r < h && c < w;
+   const getPix = (c, r) => imgdata[c + r * w];
+   const size = () => w * h;
+   const setPix = (c, r, val) => imgdata[c + r * w] = val;
+   const getImgdata = () => imgdata;
+   const isInverted = () => imgdata.reduce((acc, pix) => acc + (pix === BLACK), 0) > size() / 2;
 
-   const inrange = function (r, c) {
-      return r >= 0 && c >= 0 && r < h && c < w;
+   const invert = function () {
+      imgdata = imgdata.map(x => x === WHITE ? BLACK : WHITE);
+      return this;
    };
 
-   const size = function () {
-      return w * h;
+   const adjustBW = function () {
+      isInverted() && invert();
+      return  this;
    };
-
-   const getPix = function (c, r) {
-      return imgdata[c + r * w];
-   };
-
-   const setPix = function (c, r, val) {
-      imgdata[c + r * w] = val;
-   };
-
-
 
    const dump = function (opts) {
       opts = opts || {values: false};
@@ -34,13 +32,11 @@ module.exports = function ebocrimg(imgdata, w, h) {
       return this;
    };
 
-   const scaleDown = function (h2, w2) {
-      const rh = h2 / h;
-      const rw = w2 / w;
-
-      let scaledImgData = _.range(h2 * w2).map(() => 0);
+   const scaleDown = (nh, nw) => {
+      const [rh, rw] = [nh / h, nw / w];
+      let scaledImgData = _.range(nh * nw).map(() => 0);
       for (let r = 0; r < h; r++) {
-         let sr = Math.floor(r * rh) * w2;
+         let sr = Math.floor(r * rh) * nw;
          let rr = w * r;
          for (let c = 0; c < w; c++) {
             if (imgdata[c + rr]) {
@@ -49,24 +45,21 @@ module.exports = function ebocrimg(imgdata, w, h) {
          }
       }
 
-      const MM = Math.max(1, h * w / (h2 * w2));
+      const MM = Math.max(1, h * w / (nh * nw));
       const NN = 128;
-
-      for (let n = 0; n < h2 * w2; n++) {
+      for (let n = 0; n < nh * nw; n++) {
          if (scaledImgData[n]) {
             scaledImgData[n] = Math.floor(scaledImgData[n] * NN / MM);
          }
       }
 
-      return ebocrimg(scaledImgData, w2, h2);
+      return ebocrimg(scaledImgData, nw, nh);
    };
-
-   const scaleUp = function (h2, w2) {
+   
+   const scaleUp = (h2, w2) => {
       let scaledImgData = _.range(h2 * w2).map(() => 0);
-
       const rh = h / h2;
       const rw = w / w2;
-
       for (let r = 0; r < h2; r++) {
          const rr = r * w2;
          for (let c = 0; c < w2; c++) {
@@ -75,8 +68,8 @@ module.exports = function ebocrimg(imgdata, w, h) {
       }
       return ebocrimg(scaledImgData, w2, h2);
    };
-
-   const cropglyph = function () {
+   
+   const cropglyph = () => {
       const coord = (idx, w) => ({r: Math.floor(idx / w), c: idx % w});
       let [minr, minc, maxr, maxc] = [h - 1, w - 1, 0, 0];
       imgdata.forEach((x, idx) => {
@@ -92,29 +85,16 @@ module.exports = function ebocrimg(imgdata, w, h) {
       const img = Array(nh * nw);
       for (let r = 0; r < nh; r++) {
          const rr1 = r * nw;
-         const rr2 = (minr + r) * w
+         const rr2 = (minr + r) * w;
          for (let c = 0; c < nw; c++) {
             img[rr1 + c] = imgdata[rr2 + minc + c];
          }
       }
       return ebocrimg(img, nw, nh);
    };
-
-   invert = function () {
-      imgdata = imgdata.map(x => x === WHITE ? BLACK : WHITE);
-   };
-
-   isInverted = function () {
-      return imgdata.reduce((acc, pix) => acc + (pix === BLACK), 0) > w * h / 2;
-   };
-
-   adjustBW = function () {
-      isInverted() && invert();
-      return this;
-   };
-
-   const despeckle = function (N) {
-      despeckle2 = function (COLOR) {  // Flecken <= N Pixel werden entfernt
+   
+   const despeckle = function () {
+      const despeckle2 = (COLOR) => {  // Flecken <= N Pixel werden entfernt
          const N = 2;
          for (let r = 1; r < h - 1; r++) {
             const rr = r * w;
@@ -130,23 +110,18 @@ module.exports = function ebocrimg(imgdata, w, h) {
                   }
                }
                if (cnt <= N) {
-                  imgdata[rr + c] =  COLOR === BLACK ? WHITE : BLACK;
+                  imgdata[rr + c] = COLOR === BLACK ? WHITE : BLACK;
                }
             }
          }
       };
-      despeckle2(BLACK, N);
-      despeckle2(WHITE, N);
+      despeckle2(BLACK);
+      despeckle2(WHITE);
       return this;
    };
-
-   const getImgdata = function () {
-      return imgdata;
-   };
-
    // ######################
 
-   const box = function (val) {  // Berechne umschreibendes Rechteck von Glyph
+   const box = val => {  // Berechne umschreibendes Rechteck von Glyph
       let  [rmin, rmax, cmin, cmax] = [h - 1, 0, w - 1, 0];
       for (let r = 0; r < h; r++) {
          const rr = r * w;
@@ -159,10 +134,10 @@ module.exports = function ebocrimg(imgdata, w, h) {
             }
          }
       }
-      return {y: cmin, x: rmin, h: cmax - cmin, w: rmax - rmin};
+      return {x: rmin, y: cmin, h: cmax - cmin, w: rmax - rmin};
    };
-
-   const cntarea = function (rmin, rmax, cmin, cmax, val) {   // Count the number of pixels having value 'val' in RECT
+   
+   const cntarea = (rmin, rmax, cmin, cmax, val) => {   // Count the number of pixels having value 'val' in RECT
       const rdr = Math.floor(h / 10); // ~15
       const rdc = Math.floor(w / 10); // ~10
       const stepr = Math.floor(h / 7);
@@ -185,26 +160,21 @@ module.exports = function ebocrimg(imgdata, w, h) {
          }
       }
       return cnt;
-   }
+   };
 
-   const cntarea2 = function (r, val) { // Count the number of pixels having value 'val' in r!
-      return cntarea(r.x, r.x + r.h, r.y, r.y + r.w, val);
-   }
-
-   const remark = function (v1, v2) { // Change all pixels with value v1 to value v2.
-      imgdata = imgdata.map(x => x === v1 ? v2 : x);
-   }
-
-
-   const mark8 = function mark8(r, c, val, cnt) {
+   // Count the number of pixels having value 'val' in r!
+   const cntarea2 = (r, val) => cntarea(r.x, r.x + r.h, r.y, r.y + r.w, val);
+   
+   // Change all pixels with value v1 to value v2.
+   const remark = (v1, v2) => (imgdata = imgdata.map(x => x === v1 ? v2 : x), this);
+   
+   const mark8 = (r, c, val, cnt) => {
       if (!inrange(r, c) || getPix(c, r) !== BLACK || cnt.n > 3000) { // // >3000 to avoid Stack Overflow
          return;
       }
 
       setPix(c, r, val);
-
       cnt.n++;
-
       mark8(r + 1, c + 1, val, cnt);
       mark8(r + 1, c + 0, val, cnt);
       mark8(r + 1, c - 1, val, cnt);
@@ -215,7 +185,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
       mark8(r - 1, c - 1, val, cnt);
    };
 
-   const region8 = function (val) {  // Locate a black region and mark it with val. 8-connected
+   const region8 = val => {  // Locate a black region and mark it with val. 8-connected
       for (let r = 0; r < h; r++) {
          const rr = r * w;
          for (let  c = 0; c < w; c++) {
@@ -232,7 +202,6 @@ module.exports = function ebocrimg(imgdata, w, h) {
    const extglyph = function () { // Extract a glyph
       const GLYPHPART_MINSIZE = 3;
       let  [max, na, cntparts] = [0, 0, 0];
-
       // Find biggest region
       while ((na = region8(9)) > 0) {
          if (na <= GLYPHPART_MINSIZE) {
@@ -281,16 +250,17 @@ module.exports = function ebocrimg(imgdata, w, h) {
       remark(12, WHITE);
       return this;
    };
-
-
+   
+   // api // 
+   
    return {
-      dump,
-      scaleDown,
-      scaleUp,
-      adjustBW,
       despeckle,
+      adjustBW,
       cropglyph,
       extglyph,
-      getImgdata
+      scaleDown,
+      scaleUp,
+      getImgdata,
+      dump
    };
 };
