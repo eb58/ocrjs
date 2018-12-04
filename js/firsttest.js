@@ -12,13 +12,13 @@ const firstTest = function (prefix, dimr, dimc) {
 
    _.range(10).forEach(n => {
       dbtest[n].forEach((img, idx) => {
-         if (idx < 10000) {
+         if (idx < 100) {
             const res = ocrengine.findNearestDigitSqrDist(img.img);
             const ratio = res.secbest.dist / res.best.dist;
 
             if (n !== res.best.digit) {
                console.log('RES', n, JSON.stringify(res), ratio.toFixed(2), n !== res.best.digit ? '*****' : '', img.name);
-               ocrimg.init(img.img, dimr, dimc).dump({values:true});
+               ocrimg(img.img, dimc, dimr).dump({values:true});
                //ocrimg.init(myocrdbt10k.getMnistImage(imgarr.idxmnist), 28, 28).cropglyph().dump();
                //ocrimg.init(myocrdbtrain.getMnistImage(res.best.idxmnist), 28, 28).cropglyph().dump();
             }

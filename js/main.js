@@ -7,10 +7,13 @@ const ocrimg = require("./ocr/ocrimg");
 const ocr = require("./ocr/ocr");
 const ocrebdb = require("./util/ocrebdb");
 const firsttest = require("./firsttest");
+const  imgtest = require("./imgtest");
 
 //firsttest('dbm', 6, 4);
 //firsttest('ebdb-mnist', 6, 4);
 //firsttest('ebdb', 6, 4);
+
+imgtest(6,4)
 
 // ##################################################################################
 const traindata = "C:/Users/a403163/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/01 - Trainingsdaten/";
@@ -36,10 +39,18 @@ const getOcrimg = function (image) {
    getOcrimg(image).adjustBW().despeckle().extglyph().cropglyph().scaleDown(6, 4).dump({values: true});
 });
 
-PNGImage.readImage(testdata + 'img0/0_0_0__aliste_TestListenH_Neu_rechserv_region1_04_29_101_8_3042038h_1.tif.png', (err, image) => {
+
+
+0 && PNGImage.readImage(testdata + 'img0/0_0_1__aliste_TestListenH_Neu_rechserv_region1_04_29_101_2_3042252h_1.tif.png', (err, image) => {
    err && console.log(err);
 
-   getOcrimg(image).adjustBW().despeckle().cropglyph().dump().extglyph().scaleDown(6, 4).dump({values: true});
+   getOcrimg(image).adjustBW().despeckle().cropglyph().extglyph().scaleDown(6, 4).dump({values: true});
+});
+
+0 && PNGImage.readImage(testdata + 'img0/0_0_0__aliste_TestListenH_Neu_rechserv_region1_04_29_101_8_3042038h_1.tif.png', (err, image) => {
+   err && console.log(err);
+
+   getOcrimg(image).adjustBW().despeckle().cropglyph().extglyph().scaleDown(6, 4).dump({values: true});
 });
 
 0 && PNGImage.readImage(testdata + 'img0/0_0_1__aliste_TestListenH_Neu_rechserv_region1_04_29_101_7_3042147h_1.tif.png', (err, image) => {
