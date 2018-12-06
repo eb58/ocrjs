@@ -25,29 +25,24 @@ const ocr = db => {
       }
    };
 
-   const updateResult = (res, digit, dbv, dist) => {
-      if (dist < res.best.dist) {
-         res.secbest = Object.assign({}, res.best);
-         res.best = {digit, dist, dbv};
-      } else if (dist < res.secbest.dist) {
-         res.secbest = {digit, dist, dbv};
-      }
-   };
-
    const findNearestDigit = (v, distfct) => {
-      const res = {
-         best: {digit: -1, dist: 10000000},
-         secbest: {digit: -1, dist: 10000000}
-      };
+      let mindist = 10000000;
+      const res = _.range(10).map( (n) => ({digit: n, dist: 10000000}));
 
       _.range(10).forEach(digit => {
          digit = Number(digit);
          const dbi = db[digit];
          for (let j = 0; j < dbi.length; j++) {
-            updateResult(res, digit, dbi[j], distfct( v, dbi[j].img, res.best.dist));
+            const dist = distfct(v, dbi[j].img, mindist);
+            mindist = dist < mindist ? dist : mindist;
+            if (dist < res[digit].dist)
+               res[digit].dist = dist;
+               res[digit].img = dbi[j].img;
+               res[digit].name = dbi[j].name;
          }
       });
-      return res;
+      res.sort((a, b) => a.dist - b.dist);
+      return res.slice(0,2);
    };
 
    const findNearestDigitSqrDist = v => findNearestDigit(v, distFcts.squaredDistance);

@@ -13,7 +13,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
    const remark = (v1, v2) => (imgdata = imgdata.map(x => (x === v1 ? v2 : x)));
    const invert = () => (imgdata = imgdata.map(x => (x === WHITE ? BLACK : WHITE)));
    const adjustBW = () => (isInverted() && invert(), api);
-   
+
    const frompng = function (png) {
       let [img, w, h, sz] = [[], png.width, png.height, png.width * png.height];
       for (var x = 0; x < sz * 4; x += 4) {
@@ -33,7 +33,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
             const x = imgarr[r * w + c];
             line += x ? opts.values ? ("   " + x).substr(-3) : "*" : opts.values ? "   " : " ";
          }
-         console.log(line);
+         console.log(r, line);
       }
       return api;
    };
@@ -101,7 +101,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
    const despeckle = function () {
       const despeckle2 = COLOR => { // Flecken <= N Pixel werden entfernt
          const N = 2;
-         const newImgdata = [...imgdata]
+         const newImgdata = [...imgdata];
          for (let r = 1; r < h - 1; r++) {
             const rr = r * w;
             for (let c = 1; c < w - 1; c++) {
@@ -144,6 +144,21 @@ module.exports = function ebocrimg(imgdata, w, h) {
       return {rmin, rmax, cmin, cmax};
    };
 
+   const expandbox = rect => {
+      const randr = Math.floor(h / 15);
+      const randc = Math.floor(w / 15);
+      return {
+         rmin: Math.max(rect.rmin - randr, 0),
+         rmax: Math.min(rect.rmax + randr, h),
+         cmin: Math.max(rect.cmin - randc, 0),
+         cmax: Math.min(rect.cmax + randc, w)
+      };
+   };
+
+   const inrect = (rect, r, c) => {
+      return r >= rect.rmin && r < rect.rmax && c >= rect.cmin && c < rect.cmax;
+   };
+
    const cntarea = (rect, val) => { // Count the number of pixels having value 'val' in RECT
       let cnt = 0;
       for (let r = rect.rmin; r < rect.rmax; r++) {
@@ -172,63 +187,59 @@ module.exports = function ebocrimg(imgdata, w, h) {
               + mark8(r - 1, c - 1, val);
    };
 
-   const region8 = val => {     // Locate a black region and mark it with val. 8-connected
+   const region8 = (rect, val) => {     // Locate a black region and mark it with val. 8-connected
       for (let i = 0; i < size(); i++) {
-         if (imgdata[i] === BLACK) {
+         const x = coord(i);
+         if (imgdata[i] === BLACK ){
             const x = coord(i);
-            return mark8(x.r, x.c, val);
+            if( inrect(rect, x.r, x.c ))  {
+               return mark8(x.r, x.c, val);
+            }
          }
       }
       return 0;
    };
 
    const extglyph = () => {      // Extract a glyph
+
       const GLYPHPART_MINSIZE = 3;
-      let [max, na, cntparts] = [0, 0, 0];
-      while ((na = region8(9)) > 0) {       // Find biggest region
-         if (na <= GLYPHPART_MINSIZE) {
-            remark(9, 0); // So kleine Flecken werden ignoriert!
+      const irect = {rmin: 0, rmax: h, cmin: 0, cmax: w};
+      const parts = [];
+
+      let cnt_area = 0;
+      let mark = 15;
+
+      while ((cnt_area = region8(irect, 9)) > 0) { 
+         if (cnt_area <= GLYPHPART_MINSIZE) {
+            remark(9, WHITE); // So kleine Flecken werden getilgt!
          } else {
-            cntparts++;
-            if (na > max) {
-               if (max > 0) {
-                  remark(10, 11);
-               }
-               max = na;
-               remark(9, 10);
-            } else {
-               remark(9, 11);
-            }
+            remark(9, mark);
+            parts.push({cnt_area, mark});
+            mark++;
          }
       }
 
-      if (cntparts === 1) {
+      if (parts.length === 1) {
          remark(10, BLACK);
          return api;
       }
 
-      let cnt = max;
-      remark(11, BLACK);
-      while ((na = region8(9)) > 0) {
-         if (na > max / 6) {
-            cnt += na;
-            remark(9, 10);
-         } else {
-            const n = cntarea(box(10), 9);
-            if (cntparts > 2 ) {
-               cnt += na;
-               remark(9, 10);
-            } else {
-               remark(9, 12);
-            }
+      let totalcnt = parts.reduce((acc, part) => acc + part.cnt_area, 0);
+
+      parts.forEach(part => {
+         if (part.cnt_area > totalcnt / parts.length / 2) {
+            remark(part.mark, 10);
          }
-      }
-      let q = cnt / size();
-      if (q < 0.005) {
-         return null; // das kann kein Zeichen sein!
-      }
+      });
+
+      const rect = expandbox(box(10));
+
+      parts.forEach(part => {
+         const cnt = cntarea(rect,part.mark);
+         remark(part.mark, cnt > 0 ? 10 : 0);
+      });
+
       remark(10, BLACK);
-      remark(12, BLACK);
       return api;
    };
 
