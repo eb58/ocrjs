@@ -9,16 +9,23 @@ module.exports = function ebocrimg(imgdata, w, h) {
    const coord = idx => ({r: Math.floor(idx / w), c: idx % w});
    const getPix = (c, r) => imgdata[c + r * w];
    const setPix = (c, r, val) => (imgdata[c + r * w] = val);
-   const getImgdata = () => imgdata;
    const isInverted = () => imgdata.reduce((acc, pix) => acc + (pix === BLACK), 0) > size() / 2;
-   const cntarea2 = (r, val) => cntarea(r.x, r.x + r.h, r.y, r.y + r.w, val);
    const remark = (v1, v2) => (imgdata = imgdata.map(x => (x === v1 ? v2 : x)));
    const invert = () => (imgdata = imgdata.map(x => (x === WHITE ? BLACK : WHITE)));
    const adjustBW = () => (isInverted() && invert(), api);
+   
+   const frompng = function (png) {
+      let [img, w, h, sz] = [[], png.width, png.height, png.width * png.height];
+      for (var x = 0; x < sz * 4; x += 4) {
+         img.push(png.data[x] > 128 ? 1 : 0);
+      }
+      return ebocrimg(img, w, h);
+   };
+
 
    const dump = opts => {
       opts = opts || {values: false};
-      const imgarr = imgdata.img ? imgdata.img : imgdata;
+      const imgarr = imgdata; //.img ? imgdata.img : imgdata;
       console.log(`(h,w)=(${h},${w})`);
       for (r = 0; r < h; r++) {
          let line = "";
@@ -94,6 +101,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
    const despeckle = function () {
       const despeckle2 = COLOR => { // Flecken <= N Pixel werden entfernt
          const N = 2;
+         const newImgdata = [...imgdata]
          for (let r = 1; r < h - 1; r++) {
             const rr = r * w;
             for (let c = 1; c < w - 1; c++) {
@@ -108,10 +116,11 @@ module.exports = function ebocrimg(imgdata, w, h) {
                   }
                }
                if (cnt <= N) {
-                  imgdata[rr + c] = COLOR === BLACK ? WHITE : BLACK;
+                  newImgdata[rr + c] = COLOR === BLACK ? WHITE : BLACK;
                }
             }
          }
+         imgdata = newImgdata;
       };
       despeckle2(BLACK);
       despeckle2(WHITE);
@@ -132,58 +141,42 @@ module.exports = function ebocrimg(imgdata, w, h) {
             }
          }
       }
-      return {x: rmin, y: cmin, h: cmax - cmin, w: rmax - rmin};
+      return {rmin, rmax, cmin, cmax};
    };
 
-   const cntarea = (rmin, rmax, cmin, cmax, val) => { // Count the number of pixels having value 'val' in RECT
-      const rdr = Math.floor(h / 10); // ~15
-      const rdc = Math.floor(w / 10); // ~10
-      const stepr = Math.floor(h / 7);
-      const stepc = Math.floor(w / 10);
-      rmin = rmin - stepr;
-      cmin = cmin - stepc;
-      rmax = rmax + stepr;
-      cmax = cmax + stepc;
+   const cntarea = (rect, val) => { // Count the number of pixels having value 'val' in RECT
       let cnt = 0;
-      const ra = Math.max(rdr, rmin);
-      const ca = Math.max(rdc, cmin);
-      const re = Math.min(rmax, h - rdr);
-      const ce = Math.min(cmax, w - rdc);
-      for (let r = ra; r < re; r++) {
+      for (let r = rect.rmin; r < rect.rmax; r++) {
          const rr = r * w;
-         for (let c = ca; c < ce; c++) {
-            if (imgdata[c + rr] === val) {
-               cnt++;
-            }
+         for (let c = rect.cmin; c < rect.cmax; c++) {
+            cnt += imgdata[c + rr] === val ? 1 : 0;
          }
       }
       return cnt;
    };
 
-   const mark8 = (r, c, val, cnt) => {
-      if (!inrange(r, c) || getPix(c, r) !== BLACK || cnt.n > 10000) { // >10000 to avoid Stack Overflow
-         return;
+   const mark8 = (r, c, val) => {
+      if (!inrange(r, c) || getPix(c, r) !== BLACK) {
+         return 0;
       }
 
       setPix(c, r, val);
-      cnt.n++;
-      mark8(r + 1, c + 1, val, cnt);
-      mark8(r + 1, c + 0, val, cnt);
-      mark8(r + 1, c - 1, val, cnt);
-      mark8(r + 0, c + 1, val, cnt);
-      mark8(r + 0, c - 1, val, cnt);
-      mark8(r - 1, c + 1, val, cnt);
-      mark8(r - 1, c + 0, val, cnt);
-      mark8(r - 1, c - 1, val, cnt);
+      return 1
+              + mark8(r + 1, c + 1, val)
+              + mark8(r + 1, c + 0, val)
+              + mark8(r + 1, c - 1, val)
+              + mark8(r + 0, c + 1, val)
+              + mark8(r + 0, c - 1, val)
+              + mark8(r - 1, c + 1, val)
+              + mark8(r - 1, c + 0, val)
+              + mark8(r - 1, c - 1, val);
    };
 
    const region8 = val => {     // Locate a black region and mark it with val. 8-connected
       for (let i = 0; i < size(); i++) {
          if (imgdata[i] === BLACK) {
-            const cnt = {n: 0};
             const x = coord(i);
-            mark8( x.r, x.c, val, cnt);
-            return cnt.n;
+            return mark8(x.r, x.c, val);
          }
       }
       return 0;
@@ -221,9 +214,8 @@ module.exports = function ebocrimg(imgdata, w, h) {
             cnt += na;
             remark(9, 10);
          } else {
-            let rec = box(10);
-            const n = cntarea2(rec, 9);
-            if (cntparts > 2 && n > GLYPHPART_MINSIZE) {
+            const n = cntarea(box(10), 9);
+            if (cntparts > 2 ) {
                cnt += na;
                remark(9, 10);
             } else {
@@ -236,7 +228,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
          return null; // das kann kein Zeichen sein!
       }
       remark(10, BLACK);
-      remark(12, WHITE);
+      remark(12, BLACK);
       return api;
    };
 
@@ -247,8 +239,9 @@ module.exports = function ebocrimg(imgdata, w, h) {
       extglyph,
       scaleDown,
       scaleUp,
-      getImgdata,
-      dump
+      imgdata,
+      dump,
+      frompng
    };
 
    return api;

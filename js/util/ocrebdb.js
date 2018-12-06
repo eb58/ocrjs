@@ -2,8 +2,6 @@ const ocrebdb = function () {
 
    const fs = require('fs');
    const _ = require('underscore');
-   const sharp = require('sharp');
-   const PNGImage = require('pngjs-image');
    const ocrimg = require('../ocr/ocrimg');
 
 
