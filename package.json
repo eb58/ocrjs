@@ -7,9 +7,10 @@
   "scripts": {
     "start": "node js/main.js",
     "debug": "node --inspect-brk js/main.js ",
+    "gen-ocrmnistdb": "node js/util/ocrmnistdb",
+    "gen-ocrebdb": "node js/util/ocrebdb",
     "test": "jest",
-    "testWatch": "jest --watch",
-    "genMnistDb": "node js/util/genMnistDbs"
+    "testWatch": "jest --watch"
   },
   "author": "eb",
   "contributors": [],
