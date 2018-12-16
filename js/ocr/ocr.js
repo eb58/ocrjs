@@ -28,7 +28,7 @@ const ocr = db => {
             mindist = dist < mindist ? dist : mindist;
             if (dist < res[digit].dist) {
                res[digit].dist = dist;
-               res[digit].img = dbi[j].img;
+               //res[digit].img = dbi[j].img;
                res[digit].name = dbi[j].name;
             }
          }

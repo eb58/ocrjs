@@ -6,6 +6,7 @@ const ocr = require("./ocr/ocr");
 const firsttest = require("./firsttest");
 const imgtest = require("./imgtest");
 const dbtrain = require(`../data/dbjs/ebdb-train-6x4.js`);
+//const dbtrain = require(`../data/dbjs/ebdb-mnist-train-6x4.js`);
 const ocrengine = ocr(dbtrain);
 
 // ##################################################################################
@@ -47,27 +48,4 @@ const testdata2 = "C:/Users/a403163/Google Drive/ATOS/Projekte/OCR/Data/01 - Han
    });
 })();
 
-imgtest(6,4);
-
-
-//PNGImage.readImage(testdata + 'img0/0_0_0__aliste_TestListenH_Neu_rechserv_region1_04_29_101_8_3042038h_1.tif.png', (err, image) => {
-//   err && console.log(err);
-//
-//   getOcrimg(image).adjustBW().despeckle().extglyph().cropglyph().scaleDown(6, 4).dump({values: true});
-//});
-//
-//
-//0 && PNGImage.readImage(testdata + 'img0/0_0_1__aliste_TestListenH_Neu_rechserv_region1_04_29_101_2_3042252h_1.tif.png', (err, image) => {
-//   err && console.log(err);
-//
-//   getOcrimg(image).adjustBW().despeckle().cropglyph().extglyph().scaleDown(6, 4).dump({values: true});
-//});
-//
-//0 && PNGImage.readImage(testdata + 'img0/0_0_0__aliste_TestListenH_Neu_rechserv_region1_04_29_101_8_3042038h_1.tif.png', (err, image) => {
-//   err && console.log(err);
-//
-//   getOcrimg(image).adjustBW().despeckle().cropglyph().extglyph().scaleDown(6, 4).dump({values: true});
-//});
-//
-//
-
+imgtest(8,6);

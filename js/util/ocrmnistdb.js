@@ -14,13 +14,13 @@ const ocrmnistdb = function (prefix) {
 
    const db = _.range(10).reduce((acc, i) => ((acc[i] = []), acc), {});
 
-   const getMnistImage = i => images.slice(i * DIMSQR, (i + 1) * DIMSQR);
+   const getMnistImage = i => images.slice(i * DIMSQR, (i + 1) * DIMSQR).map(p =>p >50);
 
    const generateDBFromMnist = (dimr, dimc) => {
 
       labels.forEach((label, idx) => {
          const image = ocrimg(getMnistImage(idx), DIM, DIM).cropglyph().scaleDown(dimr, dimc);
-         db[label].push({img: image.imgdata, idxmnist: idx});
+         db[label].push({img: [...image.imgdata], idxmnist: idx});
       });
       return db;
    };
