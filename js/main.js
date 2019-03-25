@@ -51,6 +51,7 @@ const dimr = 8;
 const dimc = 6;
 
 const opts1 = {
+   nImages2Test: 100,
    dimr: dimr,
    dimc: dimc,
    dbtrain: require(`../data/dbjs/ebdb-train-${dimr}x${dimc}.js`),

@@ -40,7 +40,7 @@ const imgtest = function (opts) {
    _.range(10).forEach(digit => {
       const dir = opts.path2Testdata + '/img' + digit + '/';
       fs.readdirSync(dir).filter(fname => fname.includes('.png')).forEach((imgfile, idx) => {
-         if (idx < 100) {
+         if (idx < opts.nImages2Test) {
             handleImage(dir + imgfile, digit, statistics);
          }
       });
