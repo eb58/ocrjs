@@ -2,8 +2,8 @@
 
 const _ = require('underscore');
 const dim = '6x4';
-const dbtrain = require('../data/dbjs/dbm-train-' + dim);
-const dbtest  = require('../data/dbjs/dbm-test-' + dim);
+const dbtrain = require('../data/dbjs/ebdb-train-' + dim);
+const dbtest  = require('../data/dbjs/ebdb-test-' + dim);
 const ocr = require('../js/ocr')(dbtrain);
 
 

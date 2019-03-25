@@ -28,13 +28,13 @@ const ocr = db => {
             mindist = dist < mindist ? dist : mindist;
             if (dist < res[digit].dist) {
                res[digit].dist = dist;
-               //res[digit].img = dbi[j].img;
+               res[digit].img = dbi[j].img;
                res[digit].name = dbi[j].name;
             }
          }
       });
       res.sort((a, b) => a.dist - b.dist);
-      return res.slice(0, 2);
+      return res.slice(0, 3);
    };
 
    const findNearestDigitSqrDist = v => findNearestDigit(v, distance(sqr));

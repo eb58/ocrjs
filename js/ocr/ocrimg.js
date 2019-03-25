@@ -49,7 +49,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
          let line = "";
          for (c = 0; c < w; c++) {
             const x = imgarr[r * w + c];
-            line += x ? opts.values ? ("   " + x).substr(-3) : "*" : opts.values ? "   " : " ";
+            line += x ? opts.values ? ("     " + x).substr(-5) : "*" : opts.values ? "     " : " ";
          }
          console.log(r, line);
       }
@@ -57,7 +57,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
    };
 
    const scaleDown = function (nh, nw) {
-      const [rh, rw, nsz] = [nh / h, nw / w, nh*nw];
+      const [rh, rw, nsz] = [nh / h, nw / w, nh * nw];
       let scaledImgData = _.range(nsz).map(() => 0);
       for (let r = 0; r < h; r++) {
          let sr = Math.floor(r * rh) * nw;
@@ -69,13 +69,33 @@ module.exports = function ebocrimg(imgdata, w, h) {
          }
       }
 
-      const factor = (nh/h) * (nw/w);
+      const factor = (nh / h) * (nw / w);
       //console.log( 'factor', rh, rw, factor, `(${w},${h}) -> (${nw},${nh})`);
       for (let n = 0; n < nsz; n++) {
-         scaledImgData[n] =  Math.floor(scaledImgData[n] * factor * 1000);
+         scaledImgData[n] = Math.floor(scaledImgData[n] * factor * 1000);
       }
 
       return ebocrimg(scaledImgData, nw, nh);
+   };
+
+   const computeHalfstepImage = function (nh, nw) {
+      const [nh2, nw2] = [nh + 1, nw + 1];
+      const tmpImage = scaleDown(nh2, nw2);
+      // tmpImage.dump({values: true});
+      const tdata = tmpImage.imgdata;
+
+      const img = _.range(nh*nw).map(() => 0);
+      for (let r = 0; r < nh; r++) {
+         for (let c = 0; c < nw; c++) {
+            img[r * nw + c] =
+                    tdata[(r + 0) * nw2 + (c + 0)] +
+                    tdata[(r + 1) * nw2 + (c + 0)] +
+                    tdata[(r + 0) * nw2 + (c + 1)] +
+                    tdata[(r + 1) * nw2 + (c + 1)];
+         }
+      }
+
+      return ebocrimg(img, nw, nh);
    };
 
    const scaleUp = function (nh, nw) {
@@ -127,7 +147,6 @@ module.exports = function ebocrimg(imgdata, w, h) {
                }
             }
          }
-         //imgdata = newImgdata;
       };
       despeckle2(BLACK);
       despeckle2(WHITE);
@@ -206,7 +225,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
       return 0;
    };
 
-   const extglyph = () => {      // Extract a glyph
+   const extglyph = () => {   // Extract a glyph
 
       const GLYPHPART_MINSIZE = 3;
       const irect = {rmin: 0, rmax: h, cmin: 0, cmax: w};
@@ -252,6 +271,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
       cropglyph,
       extglyph,
       scaleDown,
+      computeHalfstepImage,
       scaleUp,
       imgdata,
       dump,

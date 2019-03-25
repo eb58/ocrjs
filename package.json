@@ -1,26 +1,30 @@
 {
-  "name": "ocrjs",
-  "version": "1.0.0",
-  "keywords": [
-    "ocr"
-  ],
-  "scripts": {
-    "start": "node js/main.js",
-    "debug": "node --inspect-brk js/main.js ",
-    "gen-ocrmnistdb": "node --inspect-brk js/util/ocrmnistdb",
-    "gen-ocrebdb": "node js/util/ocrebdb",
-    "test": "jest",
-    "testWatch": "jest --watch"
-  },
-  "author": "eb",
-  "contributors": [],
-  "dependencies": {
-    "glob": "^7.1.3",
-    "mkdirp": "^0.5.1",
-    "pngjs": "^3.3.3",
-    "underscore": "^1.9.1"
-  },
-  "devDependencies": {
-    "jest": "^23.6.0"
-  }
+   "name": "ocrjs",
+   "version": "1.0.0",
+   "keywords": [
+      "ocr", "handwritten digits"
+   ],
+   "scripts": {
+      "start": "node js/main.js",
+      "debug": "node --inspect-brk js/main.js ",
+
+      "gen-ocrebdb":          "node js/db-generators/gen-ocrebdb",
+      "gen-ocrmnistdb":       "node js/db-generators/gen-ocrmnistdb",
+      "gen-ocrebdb    debug": "node --inspect-brk js/db-generators/gen-ocrebdb",
+      "gen-ocrmnistdb debug": "node --inspect-brk js/db-generators/gen-ocrmnistdb",
+
+      "test": "jest",
+      "testWatch": "jest --watch"
+   },
+   "author": "eb",
+   "contributors": ["eb"],
+   "dependencies": {
+      "glob": "^7.1.3",
+      "mkdirp": "^0.5.1",
+      "pngjs": "^3.3.3",
+      "underscore": "^1.9.1"
+   },
+   "devDependencies": {
+      "jest": "^23.6.0"
+   }
 }

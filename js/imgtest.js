@@ -1,30 +1,22 @@
-const imgtest = function (dimr, dimc) {
+const imgtest = function (opts) {
 
-   var glob = require("glob")
    const fs = require('fs');
    const _ = require('underscore');
    const pngjs = require('pngjs');
    const ocr = require("./ocr/ocr");
    const ocrimg = require("./ocr/ocrimg");
-   const dbtrain = require(`../data/dbjs/ebdb-train-${dimr}x${dimc}.js`);
 
-   const ocrengine = ocr(dbtrain);
+   const ocrengine = ocr(opts.dbtrain);
 
-   const traindata = "C:/Users/a403163/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/01 - Trainingsdaten";
-   const testdata1 = "C:/Users/a403163/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/02 - Validierungsdaten";
-   const testdata2 = "C:/temp/test-imgs";
-
-   //const traindata = "./public/01 - Ziffern/01 - Trainingsdaten";
-   //const testdata = "./public/01 - Ziffern/02 - Validierungsdaten";
 
    const  dateStart = new Date();
 
    const badResults = [];
-   const statistics = {procent: 0, dimr, dimc, ok: 0, nok: 0, cnt: 0, secure: 0, falsesecure: 0};
+   const statistics = {procent: 0, dimr: opts.dimr, dimc: opts.dimc, ok: 0, nok: 0, cnt: 0, secure: 0, falsesecure: 0};
 
    function handleImage(imgfile, digit, statistics) {
       const png = pngjs.PNG.sync.read(fs.readFileSync(imgfile));
-      const img = ocrimg().frompng(png).adjustBW().extglyph().cropglyph().scaleDown(dimr, dimc);
+      const img = ocrimg().frompng(png).adjustBW().extglyph().cropglyph().scaleDown(opts.dimr, opts.dimc);
       const res = ocrengine.findNearestDigitSqrDist(img.imgdata);
 
       statistics.cnt++;
@@ -34,33 +26,32 @@ const imgtest = function (dimr, dimc) {
       statistics.falsesecure += ((digit !== res[0].digit) && (res[1].dist / res[0].dist > 2.0));
 
       if ((digit !== res[0].digit) && res[1].dist / res[0].dist > 2.0) {
-         ocrimg().frompng(png).adjustBW().extglyph().cropglyph().scaleDown(20, 20).dump()
+         //ocrimg().frompng(png).adjustBW().extglyph().cropglyph().scaleDown(10, 10).dump();
       }
 
       if (digit !== res[0].digit) {
          badResults.push({digit, res, imgfile});
          console.log(digit, (res[1].dist / res[0].dist).toFixed(2), imgfile, JSON.stringify(res));
-         //ocrimg().frompng(png).adjustBW().extglyph().cropglyph().scaleDown(10, 10).dump()
+         ocrimg().frompng(png).adjustBW().extglyph().cropglyph().scaleDown(opts.dimr, opts.dimc).dump({values: true});
       }
 
    }
 
-
-   0 && _.range(10).forEach(digit => {
-      const dir = testdata1 + '/img' + digit + '/';
+   _.range(10).forEach(digit => {
+      const dir = opts.path2Testdata + '/img' + digit + '/';
       fs.readdirSync(dir).filter(fname => fname.includes('.png')).forEach((imgfile, idx) => {
-         if (idx > 3000 && idx < 5000) {
-            handleImage(imgfile, digit, statistics);
+         if (idx < 100) {
+            handleImage(dir + imgfile, digit, statistics);
          }
       });
    });
 
-   fs.readdirSync(testdata2).filter(fname => fname.includes('.png')).forEach((imgfile, idx) => {
-      const digit = Number(imgfile.split('-')[1]);
-         if (idx > 3000 && idx < 5000) {
-         handleImage(testdata2 + '/' + imgfile, digit, statistics);
-      }
-   });
+//   fs.readdirSync(testdata1).filter(fname => fname.includes('.png')).forEach((imgfile, idx) => {
+//      const digit = Number(imgfile.split('-')[1]);
+//      if (idx < 10000) {
+//         handleImage(testdata1 + '/' + imgfile, digit, statistics);
+//      }
+//   });
 
 
    statistics.procent = (statistics.ok * 100 / statistics.cnt).toFixed(2);
@@ -76,10 +67,12 @@ const imgtest = function (dimr, dimc) {
             <td>${res[0].digit}</td>
             <td>${(res[1].dist / res[0].dist).toFixed(2)}</td>
             <td><img src="${badResult.imgfile}" style="height:50px"></td>
-            <td><img src="${traindata}/img${res[0].digit}/${res[0].name}" style="height:50px"></td>
-            <td><img src="${traindata}/img${res[1].digit}/${res[1].name}" style="height:50px"></td>
-         </tr>`;
-   }, '');
+            <td><img src="${opts.path2Traindata}/img${res[0].digit}/${res[0].name}" style="height:50px"></td>
+            <td><img src="${opts.path2Traindata}/img${res[1].digit}/${res[1].name}" style="height:50px"></td>
+            <td><img src="${opts.path2Traindata}/img${res[2].digit}/${res[2].name}" style="height:50px"></td>
+         </tr>
+         `;
+   }, `<pre>${JSON.stringify(statistics)}</pre>`);
 
    console.log(JSON.stringify(statistics));
    fs.writeFileSync('c:/temp/t.html', `<table border=1>${x}</table>`);
