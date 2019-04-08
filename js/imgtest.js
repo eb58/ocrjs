@@ -75,7 +75,7 @@ const imgtest = function (opts) {
    }, `<pre>${JSON.stringify(statistics)}</pre>`);
 
    console.log(JSON.stringify(statistics));
-   fs.writeFileSync('c:/temp/t.html', `<table border=1>${x}</table>`);
+   fs.writeFileSync(opts.outFile || "c:/temp/t.html", `<table border=1>${x}</table>`);
 
 };
 

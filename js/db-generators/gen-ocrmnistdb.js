@@ -3,6 +3,7 @@ const ocrMnistDbGenerator = function (prefix) {
    const fs = require('fs');
    const _ = require('underscore');
    const ocrimg = require('../ocr/ocrimg');
+   const PNG = require('pngjs').PNG;
 
    const DIM = 28;
    const DIMSQR = DIM * DIM;
@@ -36,8 +37,9 @@ function generateDBsForMnist(dimr, dimc) {
    console.log('generateDBs', dimstr);
    fs.writeFileSync(`data/dbjs/ebdb-mnist-train-${dimstr}.js`, 'module.exports = ' + JSON.stringify(ocrMnistDbGenerator('train').generate(dimr, dimc)));
    fs.writeFileSync(`data/dbjs/ebdb-mnist-test-${dimstr}.js`, ' module.exports = ' + JSON.stringify(ocrMnistDbGenerator('t10k').generate(dimr, dimc)));
+   
 }
 
 generateDBsForMnist(6, 4);
-generateDBsForMnist(7, 5);
-generateDBsForMnist(8, 6);
+//generateDBsForMnist(7, 5);
+//generateDBsForMnist(8, 6);

@@ -56,15 +56,19 @@ const opts1 = {
    dimc: dimc,
    dbtrain: require(`../data/dbjs/ebdb-train-${dimr}x${dimc}.js`),
    path2Traindata:"C:/Users/a403163/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/01 - Trainingsdaten",
-   path2Testdata:"C:/Users/a403163/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/02 - Validierungsdaten"
+   path2Testdata:"C:/Users/a403163/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/02 - Validierungsdaten",
+   outFile: "c:/temp/t.html"
 }
 
 const opts2 = {
+   nImages2Test: 100,
    dimr: dimr,
    dimc: dimc,
    dbtrain: require(`../data/dbjs/ebdb-mnist-train-${dimr}x${dimc}.js`),
    path2Traindata: "C:/temp/mnist-test-train",
-   path2Testdata: "C:/temp/mnist-test-imgs"
+   path2Testdata: "C:/temp/mnist-test-imgs",
+   outFile: "c:/temp/xt.html"
 }
 
 imgtest(opts1);
+imgtest(opts2);
