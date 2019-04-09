@@ -15,7 +15,9 @@
       "test": "jest",
       "testWatch": "jest --watch",
       "jimp": "node js/img/jimg-test.js",
-      "jimp  debug": "node --inspect-brk js/img/jimg-test.js"
+      "jimp debug": "node --inspect-brk js/img/jimg-test.js",
+      "changedpi": "node js/img/test-changedpi.js",
+      "changedpi debug": "node --inspect-brk js/img/test-changedpi.js"
    },
    "author": "eb",
    "contributors": [
