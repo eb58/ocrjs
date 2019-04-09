@@ -75,6 +75,7 @@ module.exports = function () {
          const startingIndexOfIDAT = searchStartOf(data, headers.IDAT) - lenOfSizeArr; // 4 Byte for size of IDAT
 
          const newData = Buffer.concat([data, new Buffer.alloc(lenOfSizeArr + physChunk.length + crcChunk.length)]);
+         const oldData = data.slice(startingIndexOfIDAT);
          
          newData.set(sizeArray, startingIndexOfIDAT);
          newData.set(physChunk, startingIndexOfIDAT + lenOfSizeArr);
