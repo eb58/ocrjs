@@ -3,14 +3,17 @@ module.exports = function () {
    const headers = {
       PNG: [137, 80, 78, 71, 13, 10, 26, 10],
       JPG: [0xFF, 0xD8, 0xFF],
-      pHYs:  [9, 112, 72, 89, 115] // 9 + 'pHYs', 9 at pHYs[0] being length of Data      
+      pHYs: [112, 72, 89, 115],
+      IEND: [0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82],
+      IDAT: [73, 68, 65, 84],
+      gAMA: [103, 65, 77, 65]
    };
 
    const matchHeader = (data, hdr, offSet) => hdr.every((v, i) => v === data[i + (offSet || 0)]);
 
    const calcCrc = (() => {
 
-      const  pngDataTable = function () { // Table of CRCs of all 8-bit messages.
+      const pngDataTable = (() => { // Table of CRCs of all 8-bit messages.
          const crcTable = new Int32Array(256);
          for (let n = 0; n < 256; n++) {
             let c = n;
@@ -20,7 +23,7 @@ module.exports = function () {
             crcTable[n] = c;
          }
          return crcTable;
-      }();
+      })();
 
 
       const calc = buf => {
@@ -35,7 +38,7 @@ module.exports = function () {
    })();
 
 
-   function changeDpiJpg(data, dpi) {
+   const changeDpiJpg = (data, dpi) => {
       data[13] = 1; // 1: pixel per inch /  2: pixel per cm
       data[14] = dpi >> 8; // dpiX high byte
       data[15] = dpi & 0xff; // dpiX low byte
@@ -45,38 +48,49 @@ module.exports = function () {
    }
 
 
-   function changeDpiPng(data, dpi) {
+   const changeDpiPng = (data, dpi) => {
 
-      function searchStartOfPhys(data) {
+      function searchStartOf(data, header) {
          for (let i = 0, len = data.length - 5; i < len; i++) {
-            if (matchHeader(data, headers.pHYs, i))
-               return i + 1;
+            if (matchHeader(data, header, i))
+               return i;
          }
       }
 
-      const startingIndex = searchStartOfPhys(data);
-      if (!startingIndex) {
-         console.log('No Phys!');
-         return data;
-      }
-
-      dpi *= 39.3701; // this multiplication is because the standard is dpi per meter.
-      const physChunk = [112, 72, 89, 115, // pHYs
-         dpi >>> 24, dpi >>> 16, dpi >>> 8, dpi & 0xff, // dpiX
-         dpi >>> 24, dpi >>> 16, dpi >>> 8, dpi & 0xff, // dpiY
-         1  // dot per meter....
+      const dpm = dpi * 100.0 / 2.54; // this multiplication is because the standard is dpi per meter. 
+      const physChunk = [112, 72, 89, 115, // 'pHYs'
+         dpm >>> 24, dpm >>> 16, dpm >>> 8, dpm & 0xff, // dpmX
+         dpm >>> 24, dpm >>> 16, dpm >>> 8, dpm & 0xff, // dpmY
+         1  // unit is the meter
       ];
-      
+
       const crc = calcCrc(physChunk);
       const crcChunk = [crc >>> 24, crc >>> 16, crc >>> 8, crc & 0xff];
-      
-      data.set(physChunk, startingIndex);
-      data.set(crcChunk, startingIndex + physChunk.length); 
-      
+
+      const startingIndexOfPhys = searchStartOf(data, headers.pHYs);
+      if (!startingIndexOfPhys) {
+         //console.log('No Phys!', data.length, data);
+         const sizeArray = [0, 0, 0, 9];
+         const lenOfSizeArr = sizeArray.length;
+         const startingIndexOfIDAT = searchStartOf(data, headers.IDAT) - lenOfSizeArr; // 4 Byte for size of IDAT
+
+         const newData = Buffer.concat([data, new Buffer.alloc(lenOfSizeArr + physChunk.length + crcChunk.length)]);
+         
+         newData.set(sizeArray, startingIndexOfIDAT);
+         newData.set(physChunk, startingIndexOfIDAT + lenOfSizeArr);
+         newData.set(crcChunk, startingIndexOfIDAT + lenOfSizeArr + physChunk.length);
+         newData.set(oldData, startingIndexOfIDAT + lenOfSizeArr + physChunk.length + crcChunk.length)
+         return newData;
+      } else {
+         data.set(physChunk, startingIndexOfPhys);
+         data.set(crcChunk, startingIndexOfPhys + physChunk.length);
+      }
+
+
       return data;
    }
 
-   function detectFormat(data) {
+   const detectFormat = data => {
 
       if (matchHeader(data, headers.PNG))
          return 'png';
@@ -92,7 +106,7 @@ module.exports = function () {
       return 'unknown';
    }
 
-   function changeDpi(data, dpi) {
+   const changeDpi = (data, dpi) => {
       const changers = {
          'jpg': changeDpiJpg,
          'png': changeDpiPng,
@@ -100,7 +114,7 @@ module.exports = function () {
       };
       const format = detectFormat(data);
       return changers[format](data, dpi);
-   }
+   };
 
    return {
       changeDpi
