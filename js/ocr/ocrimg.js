@@ -22,7 +22,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
    const invert = () => {
       const sz = size();
       for (let i = 0; i < sz; i++) {
-         imgdata[i] = (imgdata[i] === WHITE ? BLACK : WHITE)
+         imgdata[i] = BLACK - imgdata[i];
       }
    };
 
@@ -84,7 +84,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
       // tmpImage.dump({values: true});
       const tdata = tmpImage.imgdata;
 
-      const img = _.range(nh*nw).map(() => 0);
+      const img = _.range(nh * nw).map(() => 0);
       for (let r = 0; r < nh; r++) {
          for (let c = 0; c < nw; c++) {
             img[r * nw + c] =
@@ -275,7 +275,8 @@ module.exports = function ebocrimg(imgdata, w, h) {
       scaleUp,
       imgdata,
       dump,
-      frompng
+      frompng,
+      getPix
    };
 
    return api;

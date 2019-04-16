@@ -5,6 +5,7 @@
       "ocr",
       "handwritten digits"
    ],
+   "description": "ocr for handwritten digits",
    "scripts": {
       "start": "node js/main.js",
       "debug": "node --inspect-brk js/main.js ",
@@ -12,10 +13,9 @@
       "gen-ocrmnistdb": "node js/db-generators/gen-ocrmnistdb",
       "gen-ocrebdb    debug": "node --inspect-brk js/db-generators/gen-ocrebdb",
       "gen-ocrmnistdb debug": "node --inspect-brk js/db-generators/gen-ocrmnistdb",
+      "ocrMnistImageGenerator": "node js/utils/gen-images-from-mnist",
       "test": "jest",
       "testWatch": "jest --watch",
-      "jimp": "node js/img/jimg-test.js",
-      "jimp debug": "node --inspect-brk js/img/jimg-test.js",
       "changedpi": "node js/img/test-changedpi.js",
       "changedpi debug": "node --inspect-brk js/img/test-changedpi.js"
    },
@@ -24,14 +24,10 @@
       "eb"
    ],
    "dependencies": {
-      "glob": "^7.1.3",
       "mkdirp": "^0.5.1",
-      "pngjs": "^3.3.3",
-      "underscore": "^1.9.1",
-      "jimp": "0.6.1",
-      "changedpi": "1.0.4",
-      "atob": "^2.0.3",
-      "btoa": "^1.1.2"
+      "pngjs": "^3.4.0",
+      "pngjs-image": "^0.11.7",
+      "underscore": "^1.9.1"
    },
    "devDependencies": {
       "jest": "^23.6.0"

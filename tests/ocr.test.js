@@ -4,12 +4,12 @@ const _ = require('underscore');
 const dim = '6x4';
 const dbtrain = require('../data/dbjs/ebdb-train-' + dim);
 const dbtest  = require('../data/dbjs/ebdb-test-' + dim);
-const ocr = require('../js/ocr')(dbtrain);
+const ocr = require('../js/ocr/ocr')(dbtrain);
 
 
 const run = (n,counter) => {
    dbtest[n].forEach(checkDigit => {
-      const guessOk = ocr.findNearestDigitSqrDist(checkDigit).best.digit === n;
+      const guessOk = ocr.findNearestDigitSqrDist(checkDigit)[0].digit === n;
       counter.all++;
       counter.ok +=guessOk;
       counter.nok += !guessOk;

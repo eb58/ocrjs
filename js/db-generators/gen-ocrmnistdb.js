@@ -1,9 +1,7 @@
-
 const ocrMnistDbGenerator = function (prefix) {
    const fs = require('fs');
    const _ = require('underscore');
    const ocrimg = require('../ocr/ocrimg');
-   const PNG = require('pngjs').PNG;
 
    const DIM = 28;
    const DIMSQR = DIM * DIM;
