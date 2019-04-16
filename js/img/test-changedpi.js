@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const changeDpi = require("./changedpi").changeDpi;
+const changeDpi = require("./changedpi");
 
 const indir = '/tmp/indata/ohnePhys';
 const outdir = '/tmp/outdata';
