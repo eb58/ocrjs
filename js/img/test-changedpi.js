@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const changeDpi = require("./changedpi");
+const changeDpi = require('./changedpi');
 
 const indir = '/tmp/indata/ohnePhys';
 const outdir = '/tmp/outdata';
@@ -12,14 +12,12 @@ const outdir = '/tmp/outdata';
 //const newData = changeDpi(data, 300);
 //fs.writeFileSync(outdir + '/' + fname, newData);
 
-
 fs.readdirSync(indir)
-        .filter(fname => !fs.statSync(indir + '/' + fname).isDirectory())
-        .forEach(fname => {
-           const ext = path.extname(fname).replace('.', '');
-           console.log("working on ", indir, fname, ext);
-           const data = fs.readFileSync(indir + '/' + fname);
-           const newData = changeDpi(data, 200, ext);
-           fs.writeFileSync(outdir + '/' + fname, newData);
-        });
-
+  .filter(fname => !fs.statSync(indir + '/' + fname).isDirectory())
+  .forEach(fname => {
+    const ext = path.extname(fname).replace('.', '');
+    console.log('working on ', indir, fname, ext);
+    const data = fs.readFileSync(indir + '/' + fname);
+    const newData = changeDpi(data, 200, ext);
+    fs.writeFileSync(outdir + '/' + fname, newData);
+  });

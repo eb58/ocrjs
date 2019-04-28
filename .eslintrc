@@ -1,0 +1,24 @@
+{
+  "env": {
+    "browser": true,
+    "commonjs": true,
+    "es6": true,
+    "node": true
+  },
+  "plugins": [
+  ],
+  "extends": [
+   "eslint:recommended", 
+   "plugin:prettier/recommended"
+  ],
+  "parserOptions": {
+    "sourceType": "module",
+    "ecmaVersion": 2018
+  },
+  "settings": {
+  },
+  "rules": {
+    "linebreak-style": ["error", "unix"],
+   "no-console": "off",
+  }
+}
