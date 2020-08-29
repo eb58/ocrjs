@@ -1,12 +1,17 @@
 const fs = require('fs');
 const pngjs = require('pngjs');
 
-const ocrimg = require('./ocr/ocrimg');
-const ocr = require('./ocr/ocr');
+const ocrimg = require('../src/ocr/ocrimg');
+const ocr = require('../src/ocr/ocr');
 const imgtest = require('./imgtest');
 const dbtrain = require(`../data/dbjs/ebdb-train-6x4.js`);
 //const dbtrain = require(`../data/dbjs/ebdb-mnist-train-6x4.js`);
 const ocrengine = ocr(dbtrain);
+
+const dimr = 8;
+const dimc = 6;
+
+const dir = 'C:/Users/erich/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/';
 
 // ##################################################################################
 
@@ -30,15 +35,11 @@ const ocrengine = ocr(dbtrain);
   });
 })();
 
-const dimr = 8;
-const dimc = 6;
-
-const dir = 'C:/Users/erich/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/';
 
 const opts1 = {
   nImages2Test: 100,
-  dimr: dimr,
-  dimc: dimc,
+  dimr,
+  dimc,
   dbtrain: require(`../data/dbjs/ebdb-train-${dimr}x${dimc}.js`),
   path2Traindata: dir + '01 - Trainingsdaten',
   path2Testdata: dir + '02 - Validierungsdaten',
@@ -56,4 +57,4 @@ const opts2 = {
 };
 
 imgtest(opts1);
-imgtest(opts2);
+// imgtest(opts2);

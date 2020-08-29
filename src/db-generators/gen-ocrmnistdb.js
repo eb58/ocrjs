@@ -1,4 +1,4 @@
-const ocrMnistDbGenerator = function(prefix) {
+const ocrMnistDbGenerator = function (prefix) {
   const range = n => [...Array(n).keys()];
 
   const fs = require('fs');
@@ -8,15 +8,10 @@ const ocrMnistDbGenerator = function(prefix) {
   const DIMSQR = DIM * DIM;
   const mnistpath = 'data/mnist/';
 
-  const labels = fs
-    .readFileSync(mnistpath + prefix + '-labels.idx1-ubyte')
-    .slice(8); // cf. structure of mnist
-  const images = fs
-    .readFileSync(mnistpath + prefix + '-images.idx3-ubyte')
-    .slice(16); // cf. structure of mnist
+  const labels = fs.readFileSync(mnistpath + prefix + '-labels.idx1-ubyte').slice(8); // cf. structure of mnist
+  const images = fs.readFileSync(mnistpath + prefix + '-images.idx3-ubyte').slice(16); // cf. structure of mnist
 
-  const getMnistImage = i =>
-    images.slice(i * DIMSQR, (i + 1) * DIMSQR).map(p => p > 50);
+  const getMnistImage = i => images.slice(i * DIMSQR, (i + 1) * DIMSQR).map(p => p > 50);
 
   const generate = (dimr, dimc) => {
     const db = range(10).reduce((acc, i) => ((acc[i] = []), acc), {});
@@ -37,19 +32,9 @@ const ocrMnistDbGenerator = function(prefix) {
 };
 
 function generateDBsForMnist(dimr, dimc) {
-  const fs = require('fs');
-  const dimstr = `${dimr}x${dimc}`;
-  console.log('generateDBs', dimstr);
-  fs.writeFileSync(
-    `data/dbjs/ebdb-mnist-train-${dimstr}.js`,
-    'module.exports = ' +
-      JSON.stringify(ocrMnistDbGenerator('train').generate(dimr, dimc))
-  );
-  fs.writeFileSync(
-    `data/dbjs/ebdb-mnist-test-${dimstr}.js`,
-    ' module.exports = ' +
-      JSON.stringify(ocrMnistDbGenerator('t10k').generate(dimr, dimc))
-  );
+  console.log('generateDBs', `${dimr}x${dimc}`);
+  fs.writeFileSync(`data/dbjs/ebdb-mnist-train-${dimr}x${dimc}.js`, 'module.exports = ' + JSON.stringify(ocrMnistDbGenerator('train').generate(dimr, dimc)));
+  fs.writeFileSync(`data/dbjs/ebdb-mnist-test-${dimr}x${dimc}.js`, ' module.exports = ' + JSON.stringify(ocrMnistDbGenerator('t10k').generate(dimr, dimc)));
 }
 
 generateDBsForMnist(6, 4);

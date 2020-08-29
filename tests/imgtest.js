@@ -3,8 +3,8 @@ const imgtest = function(opts) {
 
   const fs = require('fs');
   const pngjs = require('pngjs');
-  const ocr = require('./ocr/ocr');
-  const ocrimg = require('./ocr/ocrimg');
+  const ocr = require('../src/ocr/ocr');
+  const ocrimg = require('../src/ocr/ocrimg');
 
   const ocrengine = ocr(opts.dbtrain);
 
@@ -19,6 +19,7 @@ const imgtest = function(opts) {
     nok: 0,
     cnt: 0,
     secure: 0,
+    secureprocent: 0,
     falsesecure: 0
   };
 

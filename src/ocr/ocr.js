@@ -8,7 +8,7 @@ const ocr = (db, distfct) => {
       .map(n => ({ digit: n, dist: Number.MAX_SAFE_INTEGER }))
       .map(x =>
         db[x.digit].reduce((acc, dbi) => {
-          const dist = vdist(v, dbi.img);
+          const dist = vdist(v, dbi.imgvec);
           if (dist < x.dist) {
             return {
               digit: x.digit,

@@ -1,15 +1,10 @@
-const genEBDB = function(dir, dimr, dimc) {
+const genEBDB = function (dir, dimr, dimc) {
   const range = n => [...Array(n).keys()];
-
   const fs = require('fs');
   const pngjs = require('pngjs');
-
   const ocrimg = require('../ocr/ocrimg');
 
-  const ebdb = _.extend(
-    { dimr, dimc },
-    range(10).reduce((acc, i) => ((acc[i] = []), acc), {})
-  );
+  const ebdb = Object.assign({ dimr, dimc }, range(10).reduce((acc, i) => ((acc[i] = []), acc), {}));
 
   range(10).forEach(digit => {
     const xdir = dir + '/img' + digit + '/';
@@ -17,11 +12,11 @@ const genEBDB = function(dir, dimr, dimc) {
 
     fs.readdirSync(xdir)
       .filter(fname => fname.includes('.png'))
-      .forEach((imgfile, idx) => {
+      .forEach((name, idx) => {
         if (idx < 100000) {
           //console.log('working on ' + imgfile + '...');
-          const png = pngjs.PNG.sync.read(fs.readFileSync(xdir + imgfile));
-          const img = ocrimg()
+          const png = pngjs.PNG.sync.read(fs.readFileSync(xdir + name));
+          const imgvec = ocrimg()
             .frompng(png)
             .adjustBW()
             .despeckle()
@@ -30,19 +25,16 @@ const genEBDB = function(dir, dimr, dimc) {
             .cropglyph()
             .scaleDown(dimr, dimc).imgdata;
           // const img = ocrimg().frompng(png).adjustBW().despeckle().cropglyph().extglyph().cropglyph().scaleDown(20, 20).dump( {values:true});
-          ebdb[digit].push({ img: img, name: imgfile });
+          ebdb[digit].push({ imgvec, name });
         }
       });
   });
   return ebdb;
 };
 
-const generateDBsForEBData = function(dimr, dimc) {
-  const fs = require('fs');
+const generateDBsForEBData = function (dimr, dimc) {
   const dimstr = `${dimr}x${dimc}`;
-  const dir =
-    'C:/Users/erich/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/';
-
+  const dir = 'C:/Users/erich/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/';
   const traindata = dir + '/01 - Trainingsdaten';
   const testdata = dir + '/02 - Validierungsdaten';
 

@@ -1,5 +1,3 @@
-/* global expect */
-
 const range = n => [...Array(n).keys()];
 const dim = '6x4';
 const dbtrain = require('../data/dbjs/ebdb-train-' + dim);

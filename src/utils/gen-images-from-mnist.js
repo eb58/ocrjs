@@ -1,4 +1,4 @@
-const ocrMnistImageGenerator = function(prefix) {
+const ocrMnistImageGenerator = function (prefix) {
   const range = n => [...Array(n).keys()];
 
   const fs = require('fs');
@@ -11,12 +11,8 @@ const ocrMnistImageGenerator = function(prefix) {
 
   range(10).forEach(x => mkdirp.sync('/tmp/' + prefix + '/' + x));
 
-  const labels = fs
-    .readFileSync(mnistpath + prefix + '-labels.idx1-ubyte')
-    .slice(8); // cf. structure of mnist
-  const images = fs
-    .readFileSync(mnistpath + prefix + '-images.idx3-ubyte')
-    .slice(16); // cf. structure of mnist
+  const labels = fs.readFileSync(mnistpath + prefix + '-labels.idx1-ubyte').slice(8); // cf. structure of mnist
+  const images = fs.readFileSync(mnistpath + prefix + '-images.idx3-ubyte').slice(16); // cf. structure of mnist
 
   const getMnistImage = i => images.slice(i * DIMSQR, (i + 1) * DIMSQR);
 

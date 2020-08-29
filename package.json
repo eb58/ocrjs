@@ -8,18 +8,18 @@
    "description": "ocr for handwritten digits",
    "scripts": {
       "lint": "eslint --fix js && echo 'Lint complete.'",
-      "start": "node js/main.js",
-      "debug": "node --inspect-brk js/main.js ",
-      "gen-ocrebdb": "node js/db-generators/gen-ocrebdb",
-      "gen-ocrmnistdb": "node js/db-generators/gen-ocrmnistdb",
-      "gen-ocrebdb debug": "node --inspect-brk js/db-generators/gen-ocrebdb",
-      "gen-ocrmnistdb debug": "node --inspect-brk js/db-generators/gen-ocrmnistdb",
-      "ocrMnistImageGenerator": "node js/utils/gen-images-from-mnist",
+      "start": "node tests/main.js",
+      "debug": "node --inspect-brk tests/main.js ",
+      "gen-ocrebdb": "node src/db-generators/gen-ocrebdb",
+      "gen-ocrmnistdb": "node src/db-generators/gen-ocrmnistdb",
+      "gen-ocrebdb debug": "node --inspect-brk src/db-generators/gen-ocrebdb",
+      "gen-ocrmnistdb debug": "node --inspect-brk src/db-generators/gen-ocrmnistdb",
+      "ocrMnistImageGenerator": "node src/utils/gen-images-from-mnist",
       "test": "jest",
       "testWatch": "jest --watch",
-      "changedpi": "node js/img/test-changedpi.js",
-      "changedpi debug": "node --inspect-brk js/img/test-changedpi.js",
-      "watch": "watch 'npm run -s lint' js"
+      "changedpi": "node tests/test-changedpi.js",
+      "changedpi debug": "node --inspect-brk tests/img/test-changedpi.js",
+      "watch": "watch 'npm run -s lint' src"
    },
    "author": "eb",
    "contributors": [
