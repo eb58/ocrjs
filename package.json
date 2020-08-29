@@ -12,7 +12,7 @@
       "debug": "node --inspect-brk js/main.js ",
       "gen-ocrebdb": "node js/db-generators/gen-ocrebdb",
       "gen-ocrmnistdb": "node js/db-generators/gen-ocrmnistdb",
-      "gen-ocrebdb    debug": "node --inspect-brk js/db-generators/gen-ocrebdb",
+      "gen-ocrebdb debug": "node --inspect-brk js/db-generators/gen-ocrebdb",
       "gen-ocrmnistdb debug": "node --inspect-brk js/db-generators/gen-ocrmnistdb",
       "ocrMnistImageGenerator": "node js/utils/gen-images-from-mnist",
       "test": "jest",
@@ -29,7 +29,7 @@
       "mkdirp": "^0.5.1",
       "pngjs": "^3.4.0",
       "pngjs-image": "^0.11.7",
-      "underscore": "^1.9.1"
+      "algorithms-js-eb": "1.0.0"
    },
    "devDependencies": {
       "eslint": "^5.16.0",
