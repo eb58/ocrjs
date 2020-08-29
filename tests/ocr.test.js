@@ -17,7 +17,7 @@ const run = (dim, dbname) => {
   return counter;
 };
 
-test('ocr 6x4', () => {
+xtest('ocr 6x4', () => {
   const counter = run('6x4', 'ebdb');
   const quot = counter.ok / counter.all;
   console.log(counter, quot);
@@ -29,4 +29,11 @@ xtest('ocr 8x6', () => {
   const quot = counter.ok / counter.all;
   console.log(counter, quot);
   expect(quot).toBeGreaterThan(0.975);
+});
+
+test('ocr 6x4', () => {
+  const counter = run('6x4', 'ebdb-mnist');
+  const quot = counter.ok / counter.all;
+  console.log(counter, quot);
+  expect(quot).toBeGreaterThan(0.93);
 });

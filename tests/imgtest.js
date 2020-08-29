@@ -28,7 +28,7 @@ const imgtest = function(opts) {
     const img = ocrimg()
       .frompng(png)
       .adjustBW()
-      .extGlyph()
+      .extractGlyph()
       .cropGlyph()
       .scaleDown(opts.dimr, opts.dimc);
     const res = ocrengine.findNearestDigit(img.imgdata);

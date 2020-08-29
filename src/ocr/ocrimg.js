@@ -52,7 +52,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
     }
     const factor = (nh / h) * (nw / w);
     //console.log( 'factor', rh, rw, factor, `(${w},${h}) -> (${nw},${nh})`);
-    scaledImgData = scaledImgData.map(pix => Math.floor(pix * factor * 1000);
+    scaledImgData = scaledImgData.map(pix => Math.floor(pix * factor * 1000));
 
     return ebocrimg(scaledImgData, nw, nh);
   };

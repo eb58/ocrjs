@@ -1,9 +1,8 @@
+const fs = require('fs');
+const ocrimg = require('../ocr/ocrimg');
+
 const ocrMnistDbGenerator = function (prefix) {
   const range = n => [...Array(n).keys()];
-
-  const fs = require('fs');
-  const ocrimg = require('../ocr/ocrimg');
-
   const DIM = 28;
   const DIMSQR = DIM * DIM;
   const mnistpath = 'data/mnist/';
@@ -15,13 +14,13 @@ const ocrMnistDbGenerator = function (prefix) {
 
   const generate = (dimr, dimc) => {
     const db = range(10).reduce((acc, i) => ((acc[i] = []), acc), {});
-    labels.forEach((label, idx) => {
+    labels.filter((label,i) => i<10000).forEach((label, idx) => {
       const image = ocrimg(getMnistImage(idx), DIM, DIM)
         .adjustBW()
         .despeckle()
         .cropGlyph()
         .scaleDown(dimr, dimc);
-      db[label].push({ img: [...image.imgdata], idxmnist: idx });
+      db[label].push({ imgvec: [...image.imgdata], idxmnist: idx });
     });
     return db;
   };
@@ -38,5 +37,5 @@ function generateDBsForMnist(dimr, dimc) {
 }
 
 generateDBsForMnist(6, 4);
-//generateDBsForMnist(7, 5);
-//generateDBsForMnist(8, 6);
+generateDBsForMnist(7, 5);
+generateDBsForMnist(8, 6);

@@ -12,8 +12,6 @@
       "debug": "node --inspect-brk tests/main.js ",
       "gen-ocrebdb": "node src/db-generators/gen-ocrebdb",
       "gen-ocrmnistdb": "node src/db-generators/gen-ocrmnistdb",
-      "gen-ocrebdb debug": "node --inspect-brk src/db-generators/gen-ocrebdb",
-      "gen-ocrmnistdb debug": "node --inspect-brk src/db-generators/gen-ocrmnistdb",
       "ocrMnistImageGenerator": "node src/utils/gen-images-from-mnist",
       "test": "jest",
       "testWatch": "jest --watch",
