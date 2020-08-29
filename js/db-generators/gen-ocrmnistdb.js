@@ -1,6 +1,7 @@
 const ocrMnistDbGenerator = function(prefix) {
+  const range = n => [...Array(n).keys()];
+
   const fs = require('fs');
-  const _ = require('underscore');
   const ocrimg = require('../ocr/ocrimg');
 
   const DIM = 28;
@@ -18,7 +19,7 @@ const ocrMnistDbGenerator = function(prefix) {
     images.slice(i * DIMSQR, (i + 1) * DIMSQR).map(p => p > 50);
 
   const generate = (dimr, dimc) => {
-    const db = _.range(10).reduce((acc, i) => ((acc[i] = []), acc), {});
+    const db = range(10).reduce((acc, i) => ((acc[i] = []), acc), {});
     labels.forEach((label, idx) => {
       const image = ocrimg(getMnistImage(idx), DIM, DIM)
         .adjustBW()

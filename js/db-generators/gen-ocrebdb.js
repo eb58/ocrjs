@@ -1,5 +1,6 @@
 const genEBDB = function(dir, dimr, dimc) {
-  const _ = require('underscore');
+  const range = n => [...Array(n).keys()];
+
   const fs = require('fs');
   const pngjs = require('pngjs');
 
@@ -7,10 +8,10 @@ const genEBDB = function(dir, dimr, dimc) {
 
   const ebdb = _.extend(
     { dimr, dimc },
-    _.range(10).reduce((acc, i) => ((acc[i] = []), acc), {})
+    range(10).reduce((acc, i) => ((acc[i] = []), acc), {})
   );
 
-  _.range(10).forEach(digit => {
+  range(10).forEach(digit => {
     const xdir = dir + '/img' + digit + '/';
     console.log('working on ' + xdir + '...');
 
@@ -39,10 +40,11 @@ const genEBDB = function(dir, dimr, dimc) {
 const generateDBsForEBData = function(dimr, dimc) {
   const fs = require('fs');
   const dimstr = `${dimr}x${dimc}`;
-  const traindata =
-    'C:/Users/a403163/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/01 - Trainingsdaten';
-  const testdata =
-    'C:/Users/a403163/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/02 - Validierungsdaten';
+  const dir =
+    'C:/Users/erich/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/';
+
+  const traindata = dir + '/01 - Trainingsdaten';
+  const testdata = dir + '/02 - Validierungsdaten';
 
   console.log('generateEBDBs: ', dimstr, '...');
 

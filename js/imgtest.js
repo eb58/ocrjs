@@ -1,6 +1,7 @@
 const imgtest = function(opts) {
+  const range = n => [...Array(n).keys()];
+
   const fs = require('fs');
-  const _ = require('underscore');
   const pngjs = require('pngjs');
   const ocr = require('./ocr/ocr');
   const ocrimg = require('./ocr/ocrimg');
@@ -29,15 +30,13 @@ const imgtest = function(opts) {
       .extglyph()
       .cropglyph()
       .scaleDown(opts.dimr, opts.dimc);
-    const res = ocrengine.findNearestDigitSqrDist(img.imgdata);
+    const res = ocrengine.findNearestDigit(img.imgdata);
 
     statistics.cnt++;
     statistics.ok += digit === res[0].digit;
     statistics.nok += digit !== res[0].digit;
-    statistics.secure +=
-      digit === res[0].digit && res[1].dist / res[0].dist > 2.0;
-    statistics.falsesecure +=
-      digit !== res[0].digit && res[1].dist / res[0].dist > 2.0;
+    statistics.secure += digit === res[0].digit && res[1].dist / res[0].dist > 2.0;
+    statistics.falsesecure += digit !== res[0].digit && res[1].dist / res[0].dist > 2.0;
 
     if (digit !== res[0].digit && res[1].dist / res[0].dist > 2.0) {
       //ocrimg().frompng(png).adjustBW().extglyph().cropglyph().scaleDown(10, 10).dump();
@@ -45,12 +44,7 @@ const imgtest = function(opts) {
 
     if (digit !== res[0].digit) {
       badResults.push({ digit, res, imgfile });
-      console.log(
-        digit,
-        (res[1].dist / res[0].dist).toFixed(2),
-        imgfile,
-        JSON.stringify(res)
-      );
+      console.log(digit, (res[1].dist / res[0].dist).toFixed(2), imgfile, JSON.stringify(res));
       ocrimg()
         .frompng(png)
         .adjustBW()
@@ -61,7 +55,7 @@ const imgtest = function(opts) {
     }
   }
 
-  _.range(10).forEach(digit => {
+  range(10).forEach(digit => {
     const dir = opts.path2Testdata + '/img' + digit + '/';
     fs.readdirSync(dir)
       .filter(fname => fname.includes('.png'))
@@ -80,10 +74,7 @@ const imgtest = function(opts) {
   //   });
 
   statistics.procent = ((statistics.ok * 100) / statistics.cnt).toFixed(2);
-  statistics.secureprocent = (
-    (statistics.secure * 100) /
-    statistics.cnt
-  ).toFixed(2);
+  statistics.secureprocent = ((statistics.secure * 100) / statistics.cnt).toFixed(2);
   statistics.time = ((new Date() - dateStart) / 1000).toFixed(2) + ' sec';
 
   const x = badResults.reduce((acc, badResult) => {
@@ -97,25 +88,16 @@ const imgtest = function(opts) {
             <td>${res[0].digit}</td>
             <td>${(res[1].dist / res[0].dist).toFixed(2)}</td>
             <td><img src="${badResult.imgfile}" style="height:50px"></td>
-            <td><img src="${opts.path2Traindata}/img${res[0].digit}/${
-        res[0].name
-      }" style="height:50px"></td>
-            <td><img src="${opts.path2Traindata}/img${res[1].digit}/${
-        res[1].name
-      }" style="height:50px"></td>
-            <td><img src="${opts.path2Traindata}/img${res[2].digit}/${
-        res[2].name
-      }" style="height:50px"></td>
+            <td><img src="${opts.path2Traindata}/img${res[0].digit}/${res[0].name}" style="height:50px"></td>
+            <td><img src="${opts.path2Traindata}/img${res[1].digit}/${res[1].name}" style="height:50px"></td>
+            <td><img src="${opts.path2Traindata}/img${res[2].digit}/${res[2].name}" style="height:50px"></td>
          </tr>
          `
     );
   }, `<pre>${JSON.stringify(statistics)}</pre>`);
 
   console.log(JSON.stringify(statistics));
-  fs.writeFileSync(
-    opts.outFile || 'c:/temp/t.html',
-    `<table border=1>${x}</table>`
-  );
+  fs.writeFileSync(opts.outFile || 'c:/temp/t.html', `<table border=1>${x}</table>`);
 };
 
 if (typeof module === 'object' && typeof module.exports === 'object') {

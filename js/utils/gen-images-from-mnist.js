@@ -1,6 +1,7 @@
 const ocrMnistImageGenerator = function(prefix) {
+  const range = n => [...Array(n).keys()];
+
   const fs = require('fs');
-  const _ = require('underscore');
   const mkdirp = require('mkdirp');
   const PNG = require('pngjs').PNG;
 
@@ -8,7 +9,7 @@ const ocrMnistImageGenerator = function(prefix) {
   const DIMSQR = DIM * DIM;
   const mnistpath = 'data/mnist/';
 
-  _.range(10).forEach(x => mkdirp.sync('/tmp/' + prefix + '/' + x));
+  range(10).forEach(x => mkdirp.sync('/tmp/' + prefix + '/' + x));
 
   const labels = fs
     .readFileSync(mnistpath + prefix + '-labels.idx1-ubyte')

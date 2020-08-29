@@ -1,32 +1,31 @@
 /* global expect */
 
-const _ = require('underscore');
+const range = n => [...Array(n).keys()];
 const dim = '6x4';
 const dbtrain = require('../data/dbjs/ebdb-train-' + dim);
-const dbtest  = require('../data/dbjs/ebdb-test-' + dim);
+const dbtest = require('../data/dbjs/ebdb-test-' + dim);
 const ocr = require('../js/ocr/ocr')(dbtrain);
 
-
-const run = (n,counter) => {
-   dbtest[n].forEach(checkDigit => {
-      const guessOk = ocr.findNearestDigitSqrDist(checkDigit)[0].digit === n;
+const run = n => {
+  dbtest[n].reduce(
+    (counter, checkDigit) => {
+      const guessOk = ocr.findNearestDigit(checkDigit)[0].digit === n;
       counter.all++;
-      counter.ok +=guessOk;
+      counter.ok += guessOk;
       counter.nok += !guessOk;
-   });
+      return counter;
+    },
+    { ok: 0, nok: 0, all: 0 }
+  );
 };
 
 test('first test', () => {
-   expect(1 + 2).toBe(3);
+  expect(1 + 2).toBe(3);
 });
 
 test('first ocr', () => {
-   const counter = {ok: 0, nok: 0, all: 0};
-   
-   _.range(10).forEach(n => run(n,counter) );
-   
-   const quot = counter.ok / counter.all;
-   console.log(counter, quot); 
-   //expect(quot).toBeGreaterThan(0.97); 
+  range(10).forEach(n => run(n));
+  const quot = counter.ok / counter.all;
+  console.log(counter, quot);
+  //expect(quot).toBeGreaterThan(0.97);
 });
-

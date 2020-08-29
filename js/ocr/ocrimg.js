@@ -1,10 +1,9 @@
 module.exports = function ebocrimg(imgdata, w, h) {
-  const _ = require('underscore');
-
   const BLACK = 1;
   const WHITE = 0;
 
   const size = () => w * h;
+  const range = n => [...Array(n).keys()];
   const inrange = (r, c) => r >= 0 && c >= 0 && r < h && c < w;
   const coord = idx => ({ r: Math.floor(idx / w), c: idx % w });
   const getPix = (c, r) => imgdata[c + r * w];
@@ -32,7 +31,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
     }
   };
 
-  const frompng = function(png) {
+  const frompng = function (png) {
     let [img, w, h, sz] = [[], png.width, png.height, png.width * png.height];
     for (var x = 0; x < sz * 4; x += 4) {
       img.push(png.data[x] > 128 ? 1 : 0);
@@ -48,22 +47,16 @@ module.exports = function ebocrimg(imgdata, w, h) {
       let line = '';
       for (let c = 0; c < w; c++) {
         const x = imgarr[r * w + c];
-        line += x
-          ? opts.values
-            ? ('     ' + x).substr(-5)
-            : '*'
-          : opts.values
-          ? '     '
-          : ' ';
+        line += x ? (opts.values ? ('     ' + x).substr(-5) : '*') : opts.values ? '     ' : ' ';
       }
       console.log(r, line);
     }
     return api;
   };
 
-  const scaleDown = function(nh, nw) {
+  const scaleDown = function (nh, nw) {
     const [rh, rw, nsz] = [nh / h, nw / w, nh * nw];
-    let scaledImgData = _.range(nsz).map(() => 0);
+    let scaledImgData = range(nsz).map(() => 0);
     for (let r = 0; r < h; r++) {
       let sr = Math.floor(r * rh) * nw;
       let rr = w * r;
@@ -83,13 +76,13 @@ module.exports = function ebocrimg(imgdata, w, h) {
     return ebocrimg(scaledImgData, nw, nh);
   };
 
-  const computeHalfstepImage = function(nh, nw) {
+  const computeHalfstepImage = function (nh, nw) {
     const [nh2, nw2] = [nh + 1, nw + 1];
     const tmpImage = scaleDown(nh2, nw2);
     // tmpImage.dump({values: true});
     const tdata = tmpImage.imgdata;
 
-    const img = _.range(nh * nw).map(() => 0);
+    const img = range(nh * nw).map(() => 0);
     for (let r = 0; r < nh; r++) {
       for (let c = 0; c < nw; c++) {
         img[r * nw + c] =
@@ -103,24 +96,20 @@ module.exports = function ebocrimg(imgdata, w, h) {
     return ebocrimg(img, nw, nh);
   };
 
-  const scaleUp = function(nh, nw) {
-    let scaledImgData = _.range(nh * nw).map(() => 0);
+  const scaleUp = function (nh, nw) {
+    let scaledImgData = range(nh * nw).map(() => 0);
     const rh = h / nh;
     const rw = w / nw;
     for (let r = 0; r < nh; r++) {
       const rr = r * nw;
       for (let c = 0; c < nw; c++) {
-        scaledImgData[c + rr] = imgdata[
-          Math.floor(c * rw) + w * Math.floor(r * rh)
-        ]
-          ? 1
-          : 0;
+        scaledImgData[c + rr] = imgdata[Math.floor(c * rw) + w * Math.floor(r * rh)] ? 1 : 0;
       }
     }
     return ebocrimg(scaledImgData, nw, nh);
   };
 
-  const cropglyph = function() {
+  const cropglyph = function () {
     const rect = box(BLACK);
     const [nh, nw] = [rect.rmax - rect.rmin + 1, rect.cmax - rect.cmin + 1];
 
@@ -135,7 +124,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
     return ebocrimg(img, nw, nh);
   };
 
-  const despeckle = function() {
+  const despeckle = function () {
     const despeckle2 = COLOR => {
       // Flecken <= N Pixel werden entfernt
       const N = 2;
@@ -274,9 +263,7 @@ module.exports = function ebocrimg(imgdata, w, h) {
 
     const rect = expandbox(box(10));
 
-    parts.forEach(part =>
-      remark(part.mark, cntarea(rect, part.mark) > 0 ? 10 : 0)
-    );
+    parts.forEach(part => remark(part.mark, cntarea(rect, part.mark) > 0 ? 10 : 0));
 
     remark(10, BLACK);
     return api;
