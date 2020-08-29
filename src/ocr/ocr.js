@@ -6,17 +6,18 @@ const ocr = (db, distfct) => {
   const findNearestDigit = v => {
     const res = range(10)
       .map(n => ({ digit: n, dist: Number.MAX_SAFE_INTEGER }))
-      .map(x =>
-        db[x.digit].reduce((acc, dbi) => {
-          const dist = vdist(v, dbi.imgvec);
-          if (dist < x.dist) {
-            return {
-              digit: x.digit,
-              dist,
-              ...dbi
-            };
-          }
-        }, {})
+      .map(x => db[x.digit].reduce((acc, dbi) => {
+        const dist = vdist(v, dbi.imgvec);
+        if (dist < x.dist) {
+          x.dist = dist;
+          acc = {
+            digit: x.digit,
+            dist,
+            ...dbi
+          };
+        }
+        return acc;
+      }, {})
       );
     res.sort((a, b) => a.dist - b.dist);
     return res.slice(0, 3);

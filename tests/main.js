@@ -36,7 +36,7 @@ const dir = 'C:/Users/erich/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschri
 })();
 
 
-const opts1 = {
+const opts_ebdb = {
   nImages2Test: 100,
   dimr,
   dimc,
@@ -46,7 +46,7 @@ const opts1 = {
   outFile: 'c:/temp/t.html'
 };
 
-const opts2 = {
+const opts_mistdb = {
   nImages2Test: 100,
   dimr: dimr,
   dimc: dimc,
@@ -56,5 +56,5 @@ const opts2 = {
   outFile: 'c:/temp/xt.html'
 };
 
-imgtest(opts1);
-// imgtest(opts2);
+imgtest(opts_ebdb);
+// imgtest(opts_mistdb);
