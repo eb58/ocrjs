@@ -4,7 +4,7 @@ const range = n => [...Array(n).keys()];
 const dim = '6x4';
 const dbtrain = require('../data/dbjs/ebdb-train-' + dim);
 const dbtest = require('../data/dbjs/ebdb-test-' + dim);
-const ocr = require('../js/ocr/ocr')(dbtrain);
+const ocr = require('../src/ocr/ocr')(dbtrain);
 
 const run = n => {
   dbtest[n].reduce(
