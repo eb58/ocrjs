@@ -25,8 +25,8 @@ const dir = 'C:/Users/erich/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschri
     const img = ocrimg()
       .frompng(png)
       .adjustBW()
-      .extglyph()
-      .cropglyph()
+      .extractGlyph()
+      .cropGlyph()
       .dump()
       .scaleDown(6, 4)
       .dump({ values: true });

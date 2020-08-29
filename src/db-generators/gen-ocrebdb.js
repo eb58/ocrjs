@@ -20,11 +20,11 @@ const genEBDB = function (dir, dimr, dimc) {
             .frompng(png)
             .adjustBW()
             .despeckle()
-            .cropglyph()
-            .extglyph()
-            .cropglyph()
+            .cropGlyph()
+            .extractGlyph()
+            .cropGlyph()
             .scaleDown(dimr, dimc).imgdata;
-          // const img = ocrimg().frompng(png).adjustBW().despeckle().cropglyph().extglyph().cropglyph().scaleDown(20, 20).dump( {values:true});
+          // const img = ocrimg().frompng(png).adjustBW().despeckle().cropGlyph().extractGlyph().cropGlyph().scaleDown(20, 20).dump( {values:true});
           ebdb[digit].push({ imgvec, name });
         }
       });

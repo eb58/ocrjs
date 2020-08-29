@@ -28,8 +28,8 @@ const imgtest = function(opts) {
     const img = ocrimg()
       .frompng(png)
       .adjustBW()
-      .extglyph()
-      .cropglyph()
+      .extGlyph()
+      .cropGlyph()
       .scaleDown(opts.dimr, opts.dimc);
     const res = ocrengine.findNearestDigit(img.imgdata);
 
@@ -40,7 +40,7 @@ const imgtest = function(opts) {
     statistics.falsesecure += digit !== res[0].digit && res[1].dist / res[0].dist > 2.0;
 
     if (digit !== res[0].digit && res[1].dist / res[0].dist > 2.0) {
-      //ocrimg().frompng(png).adjustBW().extglyph().cropglyph().scaleDown(10, 10).dump();
+      //ocrimg().frompng(png).adjustBW().extractGlyph().cropGlyph().scaleDown(10, 10).dump();
     }
 
     if (digit !== res[0].digit) {
@@ -49,8 +49,8 @@ const imgtest = function(opts) {
       ocrimg()
         .frompng(png)
         .adjustBW()
-        .extglyph()
-        .cropglyph()
+        .extractGlyph()
+        .cropGlyph()
         .scaleDown(opts.dimr, opts.dimc)
         .dump({ values: true });
     }

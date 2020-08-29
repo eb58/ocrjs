@@ -19,7 +19,7 @@ const ocrMnistDbGenerator = function (prefix) {
       const image = ocrimg(getMnistImage(idx), DIM, DIM)
         .adjustBW()
         .despeckle()
-        .cropglyph()
+        .cropGlyph()
         .scaleDown(dimr, dimc);
       db[label].push({ img: [...image.imgdata], idxmnist: idx });
     });
