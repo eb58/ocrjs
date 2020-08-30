@@ -3,24 +3,20 @@ const fs = require('fs');
 const pngjs = require('pngjs');
 const ocrimg = require('../ocr/ocrimg');
 
-function computeImageVec(xdir, name, dimr, dimc) {
+const prepareImg = (png, dimr, dimc) => ocrimg()
+  .frompng(png)
+  .adjustBW()
+  .extractGlyph()
+  .cropGlyph()
+  .scaleDown(dimr, dimc);
+
+const computeImage = (xdir, name, dimr, dimc) => {
   // console.log('working on ' + xdir + name + '...');
   const png = pngjs.PNG.sync.read(fs.readFileSync(xdir + name));
-  return ocrimg()
-    .frompng(png)
-    .adjustBW()
-    .despeckle()
-    .cropGlyph()
-    //.extractGlyph()
-    .scaleDown(dimr, dimc);
-    // x.dump();
-    return x;
+  return prepareImg(png, dimr, dimc);
 }
 
-
-
 const genEBDB = function (dir, dimr, dimc) {
-
   const ebdb = Object.assign({ dimr, dimc }, range(10).reduce((acc, i) => ((acc[i] = []), acc), {}));
 
   range(10).forEach(digit => {
@@ -31,7 +27,7 @@ const genEBDB = function (dir, dimr, dimc) {
       .filter(fname => fname.includes('.png'))
       .forEach((name, idx) => {
         if (idx < 100000) {
-          const imgvec = computeImageVec(xdir, name, dimr, dimc).imgdata;
+          const imgvec = computeImage(xdir, name, dimr, dimc).imgdata;
           // const img = ocrimg().frompng(png).adjustBW().despeckle().cropGlyph().extractGlyph().cropGlyph().scaleDown(20, 20).dump( {values:true});
           ebdb[digit].push({ imgvec, name });
         }
@@ -42,7 +38,7 @@ const genEBDB = function (dir, dimr, dimc) {
 
 const generateDBsForEBData = function (dimr, dimc, traindata, testdata, prefix) {
   const dimstr = `${dimr}x${dimc}`;
-  console.log('generateDBs: ', prefix,  dimstr, '...');
+  console.log('generateDBs: ', prefix, dimstr, '...');
 
   fs.writeFileSync(
     `data/dbjs/${prefix}-train-${dimstr}.js`,
@@ -74,4 +70,4 @@ if (1) {
   generateDBsForEBData(8, 6, traindata, testdata, 'mnist-db');
 }
 
-computeImageVec('C:/Users/erich/Documents/JavascriptProjekte/ocrjs/data/mnist/train/img0/','0-10245.png', 6,4);
+computeImage('C:/Users/erich/Documents/JavascriptProjekte/ocrjs/data/mnist/train/img0/', '0-10245.png', 6, 4);

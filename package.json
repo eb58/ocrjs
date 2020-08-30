@@ -5,6 +5,8 @@
       "ocr",
       "handwritten digits"
    ],
+   "repository": {},
+   "license": "MIT",
    "description": "ocr for handwritten digits",
    "scripts": {
       "lint": "eslint --fix js && echo 'Lint complete.'",
@@ -26,7 +28,6 @@
    "dependencies": {
       "mkdirp": "^1.0.4",
       "pngjs": "^5.0.0",
-      "pngjs-image": "^0.11.7",
       "algorithms-js-eb": "1.0.0"
    },
    "devDependencies": {

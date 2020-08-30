@@ -64,8 +64,8 @@ module.exports = ebocrimg = (imgdata, w, h) => {
       }
     }
     const factor = (nh / h) * (nw / w);
-    const imgdata  = scaledImgData.map(pix => Math.floor(pix * factor * 1000));
-    return ebocrimg(imgdata, nw, nh);
+    const newImgdata  = scaledImgData.map(pix => Math.floor(pix * factor * 1000));
+    return ebocrimg(newImgdata, nw, nh);
   };
 
   const computeHalfstepImage = (nh, nw) => {

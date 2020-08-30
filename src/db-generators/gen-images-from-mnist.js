@@ -10,7 +10,7 @@ const ocrMnistImageGenerator = function (prefix) {
   const DIMSQR = DIM * DIM;
   const mnistpath = 'data/mnist/';
 
-  range(10).forEach(x => mkdirp.sync('/temp/' + prefix + '/' + x));
+  range(10).forEach(digit => mkdirp.sync('/temp/' + prefix + '/img' + digit));
 
   const labels = fs.readFileSync(mnistpath + prefix + '-labels.idx1-ubyte').slice(8); // cf. structure of mnist
   const images = fs.readFileSync(mnistpath + prefix + '-images.idx3-ubyte').slice(16); // cf. structure of mnist
