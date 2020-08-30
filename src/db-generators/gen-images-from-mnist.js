@@ -4,6 +4,7 @@ const ocrMnistImageGenerator = function (prefix) {
   const fs = require('fs');
   const mkdirp = require('mkdirp');
   const PNG = require('pngjs').PNG;
+  const ocrimg = require('../ocr/ocrimg');
 
   const DIM = 28;
   const DIMSQR = DIM * DIM;
@@ -30,10 +31,27 @@ const ocrMnistImageGenerator = function (prefix) {
     return png;
   };
 
+  const createPng2 = (imageData, width, height) => {
+    const png = new PNG({ width, height, filterType: -1 });
+    for (var y = 0; y < png.width; y++) {
+      for (var x = 0; x < png.height; x++) {
+        var n = png.width * y + x;
+        var idx = n * 4;
+        const val = imageData[n] ? 255 : 0;
+        png.data[idx + 0] = png.data[idx + 1] = png.data[idx + 2] = val;
+        png.data[idx + 3] = 255;
+      }
+    }
+    return png;
+  };
+
   labels.forEach((label, idx) => {
     const data = getMnistImage(idx);
     const png = createPng(data);
-    const buffer = PNG.sync.write(png);
+    const img = ocrimg().frompng(png).scaleUp(150, 150).adjustBW();
+    const png2 = createPng2(img.imgdata, 150, 150);
+
+    const buffer = PNG.sync.write(png2);
     fs.writeFileSync(
       '/temp/' + prefix + '/' + label + '/' + label + '-' + idx + '.png',
       buffer

@@ -12,7 +12,7 @@
       "debug": "node --inspect-brk tests/main.js ",
       "gen-ocrebdb": "node src/db-generators/gen-ocrebdb",
       "gen-ocrmnistdb": "node src/db-generators/gen-ocrmnistdb",
-      "ocrMnistImageGenerator": "node src/utils/gen-images-from-mnist",
+      "gen-images-from-mnist": "node src/db-generators/gen-images-from-mnist",
       "test": "jest",
       "testWatch": "jest --watch",
       "changedpi": "node tests/test-changedpi.js",
