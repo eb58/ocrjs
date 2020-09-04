@@ -1,4 +1,4 @@
-module.exports = (function() {
+module.exports = (function () {
   const headers = {
     PNG: [137, 80, 78, 71, 13, 10, 26, 10],
     JPG: [0xff, 0xd8, 0xff],
@@ -6,8 +6,7 @@ module.exports = (function() {
     IDAT: [73, 68, 65, 84]
   };
 
-  const matchHeader = (data, hdr, offSet) =>
-    hdr.every((v, i) => v === data[i + offSet]);
+  const matchHeader = (data, hdr, offSet) => hdr.every((v, i) => v === data[i + offSet]);
 
   const changeDpiJpg = (data, dpi) => {
     data[13] = 1; // 1: pixel per inch /  2: pixel per cm
@@ -72,25 +71,15 @@ module.exports = (function() {
     if (!startingIndexOfPhys) {
       const sizeArray = [0, 0, 0, 9]; // size of pHYs chunk
       const lenOfSizeArr = sizeArray.length;
-      const startingIndexOfIDAT =
-        searchStartOf(data, headers.IDAT) - lenOfSizeArr; // 4 Byte for size of IDAT
+      const startingIndexOfIDAT = searchStartOf(data, headers.IDAT) - lenOfSizeArr; // 4 Byte for size of IDAT
 
-      const newData = Buffer.concat([
-        data,
-        Buffer.alloc(lenOfSizeArr + physChunk.length + crcChunk.length)
-      ]);
+      const newData = Buffer.concat([data, Buffer.alloc(lenOfSizeArr + physChunk.length + crcChunk.length)]);
       const oldData = data.slice(startingIndexOfIDAT);
 
       newData.set(sizeArray, startingIndexOfIDAT);
       newData.set(physChunk, startingIndexOfIDAT + lenOfSizeArr);
-      newData.set(
-        crcChunk,
-        startingIndexOfIDAT + lenOfSizeArr + physChunk.length
-      );
-      newData.set(
-        oldData,
-        startingIndexOfIDAT + lenOfSizeArr + physChunk.length + crcChunk.length
-      );
+      newData.set(crcChunk, startingIndexOfIDAT + lenOfSizeArr + physChunk.length);
+      newData.set(oldData, startingIndexOfIDAT + lenOfSizeArr + physChunk.length + crcChunk.length);
       return newData;
     } else {
       data.set(physChunk, startingIndexOfPhys);
@@ -102,11 +91,7 @@ module.exports = (function() {
 
   const detectFormat = data => {
     if (matchHeader(data, headers.PNG, 0)) return 'png';
-
     if (matchHeader(data, headers.JPG, 0)) return 'jpg';
-
-    console.log('<<<<< unknown format >>>>> ');
-
     return 'unknown';
   };
 

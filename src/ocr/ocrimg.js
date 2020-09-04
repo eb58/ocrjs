@@ -11,7 +11,7 @@ module.exports = ebocrimg = (imgdata, w, h) => {
   const adjustBW = () => (isInverted() && invert(), api);
   const inrect = (rect, r, c) => r >= rect.rmin && r < rect.rmax && c >= rect.cmin && c < rect.cmax;
   const remark = (v1, v2) => imgdata = imgdata.map(pix => pix === v1 ? v2 : pix);
-  const invert = () => (imgdata = imgdata.map(pix => BLACK - pix),api);
+  const invert = () => (imgdata = imgdata.map(pix => BLACK - pix), api);
   // const isInverted = () => imgdata.filter((_, idx) => idx % 23 === 0).reduce((acc, pix) => acc + (pix === BLACK), 0) > imagedata.length / 23 / 2
   const frompng = png => ebocrimg(png.data.map((x, idx) => png.data[4 * idx] > 128), png.width, png.height);
 
@@ -38,7 +38,7 @@ module.exports = ebocrimg = (imgdata, w, h) => {
     return api;
   };
 
-  const scaleUp =  (nh, nw) => {
+  const scaleUp = (nh, nw) => {
     const scaledImgData = range(nh * nw).map(() => 0);
     const rh = h / nh;
     const rw = w / nw;
@@ -63,8 +63,8 @@ module.exports = ebocrimg = (imgdata, w, h) => {
         }
       }
     }
-    const factor = (nh / h) * (nw / w);
-    const newImgdata  = scaledImgData.map(pix => Math.floor(pix * factor * 1000));
+    const normFactor = 1000 * (nh / h) * (nw / w);
+    const newImgdata = scaledImgData.map(pix => Math.floor(pix * normFactor));
     return ebocrimg(newImgdata, nw, nh);
   };
 

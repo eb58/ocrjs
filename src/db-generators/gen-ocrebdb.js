@@ -1,37 +1,22 @@
 const range = n => [...Array(n).keys()];
 const fs = require('fs');
-const pngjs = require('pngjs');
+const PNG = require('pngjs').PNG;
 const ocrimg = require('../ocr/ocrimg');
 
-const prepareImg = (png, dimr, dimc) => ocrimg()
-  .frompng(png)
-  .adjustBW()
-  .extractGlyph()
-  .cropGlyph()
-  .scaleDown(dimr, dimc);
+const prepareImgTest = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
+const prepareImgTrain = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().despeckle().cropGlyph().scaleDown(dimr, dimc);
+const computeImageTest = (xdir, name, dimr, dimc) => prepareImgTest(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
+const computeImageTrain = (xdir, name, dimr, dimc) => prepareImgTrain(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
 
-const computeImage = (xdir, name, dimr, dimc) => {
-  // console.log('working on ' + xdir + name + '...');
-  const png = pngjs.PNG.sync.read(fs.readFileSync(xdir + name));
-  return prepareImg(png, dimr, dimc);
-}
-
-const genEBDB = function (dir, dimr, dimc) {
+const genEBDB = function (dir, dimr, dimc, computeImage) {
   const ebdb = Object.assign({ dimr, dimc }, range(10).reduce((acc, i) => ((acc[i] = []), acc), {}));
 
   range(10).forEach(digit => {
     const xdir = dir + '/img' + digit + '/';
     console.log('working on ' + xdir + '...');
-
     fs.readdirSync(xdir)
       .filter(fname => fname.includes('.png'))
-      .forEach((name, idx) => {
-        if (idx < 100000) {
-          const imgvec = computeImage(xdir, name, dimr, dimc).imgdata;
-          // const img = ocrimg().frompng(png).adjustBW().despeckle().cropGlyph().extractGlyph().cropGlyph().scaleDown(20, 20).dump( {values:true});
-          ebdb[digit].push({ imgvec, name });
-        }
-      });
+      .forEach((name) => ebdb[digit].push({ imgvec: computeImage(xdir, name, dimr, dimc).imgdata, name }))
   });
   return ebdb;
 };
@@ -42,15 +27,15 @@ const generateDBsForEBData = function (dimr, dimc, traindata, testdata, prefix) 
 
   fs.writeFileSync(
     `data/dbjs/${prefix}-train-${dimstr}.js`,
-    'module.exports = ' + JSON.stringify(genEBDB(traindata, dimr, dimc))
+    'module.exports = ' + JSON.stringify(genEBDB(traindata, dimr, dimc, computeImageTrain))
   );
   fs.writeFileSync(
     `data/dbjs/${prefix}-test-${dimstr}.js`,
-    'module.exports = ' + JSON.stringify(genEBDB(testdata, dimr, dimc))
+    'module.exports = ' + JSON.stringify(genEBDB(testdata, dimr, dimc, computeImageTest))
   );
 };
 
-if (0) {
+if (1) {
   const dir = 'C:/Users/erich/Google Drive/ATOS/Projekte/OCR/Data/01 - Handgeschriebene Zeichen/01 - Ziffern/';
   const traindata = dir + '/01 - Trainingsdaten';
   const testdata = dir + '/02 - Validierungsdaten';
@@ -60,7 +45,7 @@ if (0) {
   generateDBsForEBData(8, 6, traindata, testdata, 'ebdb');
 }
 
-if (1) {
+if (0) {
   const dir = 'C:/Users/erich/Documents/JavascriptProjekte/ocrjs/data/mnist/';
   const traindata = dir + '/train';
   const testdata = dir + '/t10k';
@@ -70,4 +55,4 @@ if (1) {
   generateDBsForEBData(8, 6, traindata, testdata, 'mnist-db');
 }
 
-computeImage('C:/Users/erich/Documents/JavascriptProjekte/ocrjs/data/mnist/train/img0/', '0-10245.png', 6, 4);
+// computeImage('C:/Users/erich/Documents/JavascriptProjekte/ocrjs/data/mnist/train/img0/', '0-10245.png', 6, 4);
