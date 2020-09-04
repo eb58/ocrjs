@@ -12,26 +12,17 @@ module.exports = ebocrimg = (imgdata, w, h) => {
   const inrect = (rect, r, c) => r >= rect.rmin && r < rect.rmax && c >= rect.cmin && c < rect.cmax;
   const remark = (v1, v2) => imgdata = imgdata.map(pix => pix === v1 ? v2 : pix);
   const invert = () => (imgdata = imgdata.map(pix => BLACK - pix), api);
-  // const isInverted = () => imgdata.filter((_, idx) => idx % 23 === 0).reduce((acc, pix) => acc + (pix === BLACK), 0) > imagedata.length / 23 / 2
   const frompng = png => ebocrimg(png.data.map((x, idx) => png.data[4 * idx] > 128), png.width, png.height);
+  const isInverted = () => range(Math.floor(size()/13)).reduce((acc,_,idx)=>acc+(imgdata[idx*13]===BLACK),0) > size()/26;
 
-  const isInverted = () => {
-    let cnt = 0;
-    const sz = size();
-    for (let i = 0; i < sz; i += 23) cnt += (imgdata[i] === BLACK);
-    return cnt > sz / 23 / 2;
-  };
-
-
-  const dump = opts => {
-    opts = opts || { values: false };
+  const dump = (showValues) => {
     const imgarr = imgdata; //.img ? imgdata.img : imgdata;
     console.log(`(h,w)=(${h},${w})`);
     for (let r = 0; r < h; r++) {
       let line = '';
       for (let c = 0; c < w; c++) {
         const x = imgarr[r * w + c];
-        line += x ? (opts.values ? ('     ' + x).substr(-5) : '*') : opts.values ? '     ' : ' ';
+        line += x ? (showValues ? ('     ' + x).substr(-5) : '*') : showValues ? '     ' : ' ';
       }
       console.log(r, line);
     }

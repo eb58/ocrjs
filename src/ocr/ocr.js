@@ -2,67 +2,44 @@ const ocr = (distfct) => {
   const fs = require('fs');
   const PNG = require('pngjs').PNG;
   const ocrimg = require('./ocrimg');
-
   const range = n => [...Array(n).keys()];
   const sqr = x => x * x;
   const vdist = distfct || ((v1, v2) => v1.reduce((d, _, i) => d + sqr(v1[i] - v2[i]), 0));
 
-  const findNearestDigit = (imgvec, db) => {
-    const res = range(10)
-      .map(n => ({ digit: n, dist: Number.MAX_SAFE_INTEGER }))
-      .map(x => db[x.digit].reduce((acc, dbi) => {
-        const dist = vdist(imgvec, dbi.imgvec);
-        if (dist < x.dist) {
-          x.dist = dist;
-          acc = {
-            digit: x.digit,
-            dist,
-            ...dbi
-          };
-        }
-        return acc;
-      }, {})
-      );
-    res.sort((a, b) => a.dist - b.dist);
-    return res.slice(0, 3);
-  };
+  const findNearestDigit = (imgvec, db) => range(10)
+    .map(digit => ({ digit, dist: Number.MAX_SAFE_INTEGER }))
+    .map(x => db[x.digit].reduce((acc, dbi) => {
+      const dist = vdist(imgvec, dbi.imgvec);
+      if (dist < x.dist) {
+        x.dist = dist;
+        acc = {
+          digit: x.digit,
+          dist,
+          ...dbi
+        };
+      }
+      return acc;
+    }, {})
+    ).sort((a, b) => a.dist - b.dist)
+    .slice(0, 3);
 
-  const confidence = res => res[1].dist / res[0].dist;
+
+  const confidence = res => res[0] && res[1] ? res[1].dist / res[0].dist : 0;
   const isSecure = res => confidence(res) > 2.5;
-
-  const prepareImg = (png, dimr, dimc) => ocrimg()
-    .frompng(png)
-    .adjustBW()
-    .extractGlyph()
-    .cropGlyph()
-    .scaleDown(dimr, dimc);
-
-  const preparePngFile = (pngfile, dimr, dimc) => {
-    const png = PNG.sync.read(fs.readFileSync(pngfile));
-    return prepareImg(png, dimr, dimc);
-  }
-
-
-  const recognizeImage = (imgfile, db1, db2) => {
-    const png = PNG.sync.read(fs.readFileSync(imgfile));
-    const img1 = prepareImg(png, db1.dimr, db1.dimc);
-    const res = findNearestDigit(img1.imgdata, db1);
-    if (confidence(res) > 2.5) {
-      return res;
-    }
-    if (!db2) {
-      return res;
-    }
-    else {
-      const img2 = prepareImg(png, db2.dimr, db2.dimc);
-      return findNearestDigit(img2.imgdata, db2);
-    }
-  }
-
+  const prepareImg1 = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
+  const prepareImg2 = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().despeckle().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
+  const prepareImg3 = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().despeckle().cropGlyph().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
+  const png = (pngfile) => PNG.sync.read(fs.readFileSync(pngfile));
+  const recImg = (png, db) => findNearestDigit(prepareImg3(png, db.dimr, db.dimc).imgdata, db);
+  const recImage = (pngfile, dbs) => dbs.reduce((acc, db) => {
+    const res = recImg(png(pngfile), db);
+    return isSecure(res) ? [res] : [...acc, res]
+  }, []);
+  const recognizeImage = (pngfile, dbs) => recImage(pngfile, dbs).sort((r1, r2) => confidence(r2) - confidence(r1))[0];
 
   return {
     findNearestDigit,
-    prepareImg,
+    prepareImg: prepareImg1,
     recognizeImage,
   };
 }
