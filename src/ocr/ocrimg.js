@@ -13,15 +13,14 @@ module.exports = ebocrimg = (imgdata, w, h) => {
   const remark = (v1, v2) => imgdata = imgdata.map(pix => pix === v1 ? v2 : pix);
   const invert = () => (imgdata = imgdata.map(pix => BLACK - pix), api);
   const frompng = png => ebocrimg(png.data.map((x, idx) => png.data[4 * idx] > 128), png.width, png.height);
-  const isInverted = () => range(Math.floor(size()/13)).reduce((acc,_,idx)=>acc+(imgdata[idx*13]===BLACK),0) > size()/26;
+  const isInverted = () => range(Math.floor(size() / 13)).reduce((acc, _, idx) => acc + (imgdata[idx * 13] === BLACK), 0) > size() / 26;
 
   const dump = (showValues) => {
-    const imgarr = imgdata; //.img ? imgdata.img : imgdata;
     console.log(`(h,w)=(${h},${w})`);
     for (let r = 0; r < h; r++) {
       let line = '';
       for (let c = 0; c < w; c++) {
-        const x = imgarr[r * w + c];
+        const x = imgdata[r * w + c];
         line += x ? (showValues ? ('     ' + x).substr(-5) : '*') : showValues ? '     ' : ' ';
       }
       console.log(r, line);
@@ -62,7 +61,7 @@ module.exports = ebocrimg = (imgdata, w, h) => {
   const computeHalfstepImage = (nh, nw) => {
     const [nh2, nw2] = [nh + 1, nw + 1];
     const tmpImage = scaleDown(nh2, nw2);
-    // tmpImage.dump({values: true});
+    // tmpImage.dump(true);
     const tdata = tmpImage.imgdata;
 
     const img = range(nh * nw).map(() => 0);
@@ -93,10 +92,10 @@ module.exports = ebocrimg = (imgdata, w, h) => {
     return ebocrimg(img, nw, nh);
   };
 
-  const despeckle = function () {
+  const despeckle = function (N) {
+    N = N || 3;
     const despeckle2 = COLOR => {
       // Flecken <= N Pixel werden entfernt
-      const N = 2;
       for (let r = 1; r < h - 1; r++) {
         const rr = r * w;
         for (let c = 1; c < w - 1; c++) {
@@ -227,6 +226,43 @@ module.exports = ebocrimg = (imgdata, w, h) => {
     const rect = expandbox(box(10));
 
     parts.forEach(part => remark(part.mark, cntarea(rect, part.mark) > 0 ? 10 : 0));
+
+    remark(10, BLACK);
+    return api;
+  };
+
+  const extractBiggestGlyph = () => {
+    const GLYPHPART_MINSIZE = 3;
+    const irect = { rmin: 0, rmax: h, cmin: 0, cmax: w };
+    const parts = [];
+
+    let cnt_area = 0;
+    let mark = 15;
+
+    while ((cnt_area = region8(irect, 9)) > 0) {
+      if (cnt_area <= GLYPHPART_MINSIZE) {
+        remark(9, WHITE); // So kleine Flecken werden getilgt!
+      } else {
+        remark(9, mark);
+        parts.push({ cnt_area, mark });
+        mark++;
+      }
+    }
+
+    if (parts.length === 1) {
+      remark(parts[0].mark, BLACK);
+      return api;
+    }
+
+    const totalcnt = parts.reduce((acc, part) => acc + part.cnt_area, 0);
+
+    parts.forEach(part => {
+      if (part.cnt_area > totalcnt / parts.length / 2) {
+        remark(part.mark, 10);
+      }
+    });
+
+    const rect = expandbox(box(10));
 
     remark(10, BLACK);
     return api;

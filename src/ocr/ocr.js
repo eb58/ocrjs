@@ -4,6 +4,7 @@ const ocr = (distfct) => {
   const ocrimg = require('./ocrimg');
   const range = n => [...Array(n).keys()];
   const sqr = x => x * x;
+  const abs = x => x < 0 ? -x : x;
   const vdist = distfct || ((v1, v2) => v1.reduce((d, _, i) => d + sqr(v1[i] - v2[i]), 0));
 
   const findNearestDigit = (imgvec, db) => range(10)
@@ -15,7 +16,9 @@ const ocr = (distfct) => {
         acc = {
           digit: x.digit,
           dist,
-          ...dbi
+          ...dbi,
+          dimr: db.dimr,
+          dimc: db.dimc,
         };
       }
       return acc;
@@ -38,8 +41,6 @@ const ocr = (distfct) => {
   const recognizeImage = (pngfile, dbs) => recImage(pngfile, dbs).sort((r1, r2) => confidence(r2) - confidence(r1))[0];
 
   return {
-    findNearestDigit,
-    prepareImg: prepareImg1,
     recognizeImage,
   };
 }
