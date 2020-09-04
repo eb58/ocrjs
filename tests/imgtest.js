@@ -1,6 +1,5 @@
 const imgtest = function (opts) {
   const fs = require('fs');
-  const pngjs = require('pngjs');
   const range = n => [...Array(n).keys()];
   const ocr = require('../src/ocr/ocr');
   const ebdb_train_6x4 = require(`../data/dbjs/ebdb-train-6x4`);
@@ -39,18 +38,33 @@ const imgtest = function (opts) {
     statistics.secureprocent = ((statistics.secure * 100) / statistics.cnt).toFixed(2);
     statistics.time = ((new Date() - dateStart) / 1000).toFixed(2) + ' sec';
     console.log(statistics);
-    const htmlRows = badResults.reduce((acc, badResult) => acc +
+    const tableHeader = `
+      <tr>
+        <td>Korrekt</td>
+        <td>Erkannt</td>
+        <td>Konfidenz</td>
+        <td>Zu erkennen</td>
+        <td>Kandidat1</td>
+        <td>Kandidat2</td>
+        <td>Kandidat3</td>
+      </tr>`
+    const tableRows = badResults.reduce((acc, badResult) => acc +
       `<tr>
           <td>${badResult.digit}</td>
           <td>${badResult.res[0].digit}</td>
           <td>${(badResult.res[1].dist / badResult.res[0].dist).toFixed(2)}</td>
-          <td><img src="${opts.path2Testdata}/${badResult.imgfile}" style="height:50px"></td>
+          <td><img src="${opts.path2Testdata}/img${badResult.digit}/${badResult.imgfile}" style="height:50px"></td>
           <td><img src="${opts.path2Traindata}/img${badResult.res[0].digit}/${badResult.res[0].name}" style="height:50px"></td>
           <td><img src="${opts.path2Traindata}/img${badResult.res[1].digit}/${badResult.res[1].name}" style="height:50px"></td>
           <td><img src="${opts.path2Traindata}/img${badResult.res[2].digit}/${badResult.res[2].name}" style="height:50px"></td>
-        </tr>`
-      , `<pre>${JSON.stringify(statistics)}</pre>`);
-    fs.writeFileSync(opts.outFile || 'c:/temp/t.html', `<table border=1>${htmlRows}</table>`);
+       </tr>`
+      , '');
+    fs.writeFileSync(opts.outFile || 'c:/temp/t.html', `
+    <pre>${JSON.stringify(statistics)}</pre>
+    <table border=1>
+        ${tableHeader}
+        ${tableRows}
+    </table>`);
   }
 
   range(10).forEach(digit => {

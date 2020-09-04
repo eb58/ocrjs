@@ -40,8 +40,8 @@ if (1) {
   const traindata = dir + '/01 - Trainingsdaten';
   const testdata = dir + '/02 - Validierungsdaten';
 
-  generateDBsForEBData(6, 4, traindata, testdata, 'ebdb');
-  generateDBsForEBData(7, 5, traindata, testdata, 'ebdb');
+  //generateDBsForEBData(6, 4, traindata, testdata, 'ebdb');
+  //generateDBsForEBData(7, 5, traindata, testdata, 'ebdb');
   generateDBsForEBData(8, 6, traindata, testdata, 'ebdb');
 }
 
@@ -54,5 +54,3 @@ if (0) {
   generateDBsForEBData(7, 5, traindata, testdata, 'mnist-db');
   generateDBsForEBData(8, 6, traindata, testdata, 'mnist-db');
 }
-
-// computeImage('C:/Users/erich/Documents/JavascriptProjekte/ocrjs/data/mnist/train/img0/', '0-10245.png', 6, 4);
