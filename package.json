@@ -12,7 +12,7 @@
       "lint": "eslint --fix js && echo 'Lint complete.'",
       "start": "node tests/main.js",
       "debug": "node --inspect-brk tests/main.js ",
-      "gen-ocrebdb": "node  src/db-generators/gen-ocrebdb",
+      "gen-ocrebdb": "node src/db-generators/gen-ocrebdb",
       "gen-images-from-mnist": "node src/db-generators/gen-images-from-mnist",
       "test": "jest",
       "testWatch": "jest --watch",

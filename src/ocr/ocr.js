@@ -4,7 +4,6 @@ const ocr = (distfct) => {
   const ocrimg = require('./ocrimg');
   const range = n => [...Array(n).keys()];
   const sqr = x => x * x;
-  const abs = x => x < 0 ? -x : x;
   const vdist = distfct || ((v1, v2) => v1.reduce((d, _, i) => d + sqr(v1[i] - v2[i]), 0));
 
   const findNearestDigit = (imgvec, db) => range(10)
@@ -17,8 +16,6 @@ const ocr = (distfct) => {
           digit: x.digit,
           dist,
           ...dbi,
-          dimr: db.dimr,
-          dimc: db.dimc,
         };
       }
       return acc;
@@ -28,19 +25,28 @@ const ocr = (distfct) => {
 
 
   const confidence = res => res[0] && res[1] ? res[1].dist / res[0].dist : 0;
-  const isSecure = res => confidence(res) > 2.5;
-  const prepareImg1 = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
-  const prepareImg2 = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().despeckle().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
-  const prepareImg3 = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().despeckle().cropGlyph().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
+  const isSecure = res => confidence(res) > 2.4;
+
+  const prepareImg = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().despeckle().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
+
+  const prepares = [prepareImg]
+
   const png = (pngfile) => PNG.sync.read(fs.readFileSync(pngfile));
-  const recImg = (png, db) => findNearestDigit(prepareImg3(png, db.dimr, db.dimc).imgdata, db);
+
+  const recImg = (png, db, prepares) => prepares.reduce((acc, prepare) => {
+    const res = findNearestDigit(prepare(png, db.dimr, db.dimc).imgdata, db);
+    return isSecure(res) ? [res] : [...acc, res]
+  }, []);
+
+  const recImgs = (png, db) => recImg(png, db, prepares)[0];
   const recImage = (pngfile, dbs) => dbs.reduce((acc, db) => {
-    const res = recImg(png(pngfile), db);
+    const res = recImgs(png(pngfile), db);
     return isSecure(res) ? [res] : [...acc, res]
   }, []);
   const recognizeImage = (pngfile, dbs) => recImage(pngfile, dbs).sort((r1, r2) => confidence(r2) - confidence(r1))[0];
 
   return {
+    findNearestDigit,
     recognizeImage,
   };
 }
