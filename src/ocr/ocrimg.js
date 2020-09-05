@@ -77,7 +77,7 @@ module.exports = ebocrimg = (imgdata, w, h) => {
     return ebocrimg(img, nw, nh);
   };
 
-  const cropGlyph = function () {
+  const cropGlyph = ()=>  {
     const rect = box(BLACK);
     const [nh, nw] = [rect.rmax - rect.rmin + 1, rect.cmax - rect.cmin + 1];
 
@@ -92,7 +92,7 @@ module.exports = ebocrimg = (imgdata, w, h) => {
     return ebocrimg(img, nw, nh);
   };
 
-  const despeckle = function (N) {
+  const despeckle =  (N) => {
     N = N || 3;
     const despeckle2 = COLOR => {
       // Flecken <= N Pixel werden entfernt
