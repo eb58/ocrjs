@@ -23,7 +23,7 @@ if (0) {
     }));
 }
 
-const imgtest = function (opts) {
+const imgtest = (opts) => {
   const fs = require('fs');
   const range = n => [...Array(n).keys()];
   const ocrengine = require('../src/ocr/ocr')();
@@ -105,10 +105,10 @@ const opts_ebdb = {
 };
 
 const opts_mnistdb = {
-  dbs: mnistdbs,
+  dbs: ebdbs,
   nImages2Test: 100,
-  path2Testdata: mnistDir + 't10k',
+  path2Testdata: mnistDir + 'train',
 };
 
 
-imgtest(opts_ebdb);
+imgtest(opts_mnistdb);

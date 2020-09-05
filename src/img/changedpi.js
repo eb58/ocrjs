@@ -1,4 +1,4 @@
-module.exports = (function () {
+module.exports = (() => {
   const headers = {
     PNG: [137, 80, 78, 71, 13, 10, 26, 10],
     JPG: [0xff, 0xd8, 0xff],
@@ -41,7 +41,7 @@ module.exports = (function () {
       };
     })();
 
-    function searchStartOf(data, header) {
+    const searchStartOf= (data, header) => {
       for (let i = 0, len = data.length - 5; i < len; i++) {
         if (matchHeader(data, header, i)) return i;
       }

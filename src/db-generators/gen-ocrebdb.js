@@ -9,7 +9,7 @@ const prepareImgTrain = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().de
 const computeImageTest = (xdir, name, dimr, dimc) => prepareImgTest(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
 const computeImageTrain = (xdir, name, dimr, dimc) => prepareImgTrain(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
 
-const genEBDB = function (dir, dimr, dimc, computeImage) {
+const genEBDB = (dir, dimr, dimc, computeImage) => {
   const ebdb = Object.assign({ dimr, dimc, dir }, range(10).reduce((acc, i) => ((acc[i] = []), acc), {}));
 
   range(10).forEach(digit => {
@@ -24,7 +24,7 @@ const genEBDB = function (dir, dimr, dimc, computeImage) {
   return ebdb;
 };
 
-const generateDBsForEBData = function (dimr, dimc, traindata, testdata, prefix) {
+const generateDBsForEBData = (dimr, dimc, traindata, testdata, prefix) => {
   const dimstr = `${dimr}x${dimc}`;
   console.log('generateDBs: ', prefix, dimstr, '...');
 
@@ -47,8 +47,8 @@ if (1) {
   const testdata = ebdbDir + 'test';
 
   generateDBsForEBData(6, 4, traindata, testdata, 'ebdb');
-  //generateDBsForEBData(7, 5, traindata, testdata, 'ebdb');
-  //generateDBsForEBData(8, 6, traindata, testdata, 'ebdb');
+  generateDBsForEBData(7, 5, traindata, testdata, 'ebdb');
+  generateDBsForEBData(8, 6, traindata, testdata, 'ebdb');
 }
 
 if (0) {

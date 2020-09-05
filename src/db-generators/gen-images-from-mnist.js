@@ -1,4 +1,4 @@
-const ocrMnistImageGenerator = function (prefix) {
+const ocrMnistImageGenerator = (prefix) => {
   const range = n => [...Array(n).keys()];
 
   const fs = require('fs');
