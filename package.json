@@ -9,7 +9,6 @@
    "license": "MIT",
    "description": "ocr for handwritten digits",
    "scripts": {
-      "lint": "eslint --fix js && echo 'Lint complete.'",
       "start": "node tests/main.js",
       "debug": "node --inspect-brk tests/main.js ",
       "gen-ocrebdb": "node src/db-generators/gen-ocrebdb",
@@ -17,8 +16,7 @@
       "test": "jest",
       "testWatch": "jest --watch",
       "changedpi": "node tests/test-changedpi.js",
-      "changedpi debug": "node --inspect-brk tests/img/test-changedpi.js",
-      "watch": "watch 'npm run -s lint' src"
+      "changedpi debug": "node --inspect-brk tests/img/test-changedpi.js"
    },
    "author": "eb",
    "contributors": [
