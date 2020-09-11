@@ -35,10 +35,9 @@ const ocrMnistImageGenerator = (prefix) => {
     const png = new PNG({ width, height, filterType: -1 });
     for (var y = 0; y < png.width; y++) {
       for (var x = 0; x < png.height; x++) {
-        var n = png.width * y + x;
-        var idx = n * 4;
-        const val = imageData[n] ? 255 : 0;
-        png.data[idx + 0] = png.data[idx + 1] = png.data[idx + 2] = val;
+        const n = png.width * y + x;
+        const idx = n * 4;
+        png.data[idx + 0] = png.data[idx + 1] = png.data[idx + 2] = imageData[n] ? 255 : 0;
         png.data[idx + 3] = 255;
       }
     }
@@ -46,16 +45,15 @@ const ocrMnistImageGenerator = (prefix) => {
   };
 
   labels.forEach((label, idx) => {
-    const data = getMnistImage(idx);
-    const png = createPng(data);
-    const img = ocrimg().frompng(png).scaleUp(150, 150).adjustBW();
-    const png2 = createPng2(img.imgdata, 150, 150);
-
-    const buffer = PNG.sync.write(png2);
-    fs.writeFileSync(
-      '/temp/' + prefix + '/' + label + '/' + label + '-' + idx + '.png',
-      buffer
-    );
+    const fname = '/temp/' + prefix + '/img' + label + '/' + label + '-' + idx + '.png';
+    if (!fs.existsSync(fname)) {
+      console.log(idx, fname);
+      const data = getMnistImage(idx);
+      const png = createPng(data);
+      const img = ocrimg().frompng(png).scaleUp(150, 150);
+      const png2 = createPng2(img.imgdata, 150, 150);
+      fs.writeFileSync(fname, PNG.sync.write(png2));
+    }
   });
 };
 ocrMnistImageGenerator('t10k');
