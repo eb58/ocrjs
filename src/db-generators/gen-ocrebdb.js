@@ -3,18 +3,12 @@ const fs = require('fs');
 const PNG = require('pngjs').PNG;
 const ocrimg = require('../ocr/ocrimg');
 
-
-const prepareImgTest = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
-const prepareImgTrain = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().despeckle().cropGlyph().scaleDown(dimr, dimc);
-const computeImageTest = (xdir, name, dimr, dimc) => prepareImgTest(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
-const computeImageTrain = (xdir, name, dimr, dimc) => prepareImgTrain(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
-
 const genEBDB = (dir, dimr, dimc, computeImage) => {
   const ebdb = Object.assign({ dimr, dimc, dir }, range(10).reduce((acc, i) => ((acc[i] = []), acc), {}));
 
   range(10).forEach(digit => {
     const xdir = dir + '/img' + digit + '/';
-    console.log('working on ' + xdir + '...');
+    console.log('working on ' + xdir + ' ...');
     fs.readdirSync(xdir)
       .filter(fname => fname.includes('.png'))
       .forEach((name) => {
@@ -28,31 +22,36 @@ const generateDBsForEBData = (dimr, dimc, traindata, testdata, prefix) => {
   const dimstr = `${dimr}x${dimc}`;
   console.log('generateDBs: ', prefix, dimstr, '...');
 
-  fs.writeFileSync(
+  const prepareImgTrain = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().despeckle().cropGlyph().scaleDown(dimr, dimc);
+  const computeImageTrain = (xdir, name, dimr, dimc) => prepareImgTrain(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
+    fs.writeFileSync(
     `data/dbjs/train/${prefix}-train-${dimstr}.js`,
     'module.exports = ' + JSON.stringify(genEBDB(traindata, dimr, dimc, computeImageTrain))
   );
-  fs.writeFileSync(
+  const prepareImgTest = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
+  const computeImageTest = (xdir, name, dimr, dimc) => prepareImgTest(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
+  0 && fs.writeFileSync(
     `data/dbjs/test/${prefix}-test-${dimstr}.js`,
     'module.exports = ' + JSON.stringify(genEBDB(testdata, dimr, dimc, computeImageTest))
   );
 };
 
-const dbdir = 'C:/Users/erich/Documents/JavascriptProjekte/ocrjs/data/';
-
+const imgsdir = 'C:/Users/erich/Documents/JavascriptProjekte/ocrjs/data/imgs/';
 
 if (1) {
-  const ebdbDir = dbdir + 'ebdb/';
+  const ebdbDir = imgsdir + 'ebdb/';
   const traindata = ebdbDir + 'train';
   const testdata = ebdbDir + 'test';
 
   generateDBsForEBData(6, 4, traindata, testdata, 'ebdb');
   generateDBsForEBData(7, 5, traindata, testdata, 'ebdb');
   generateDBsForEBData(8, 6, traindata, testdata, 'ebdb');
+  generateDBsForEBData(9, 7, traindata, testdata, 'ebdb');
+  //generateDBsForEBData(11, 8, traindata, testdata, 'ebdb');
 }
 
 if (0) {
-  const mnistDir = dbdir + 'mnist/';
+  const mnistDir = imgsdir + 'mnist/';
   const traindata = mnistDir + '/train';
   const testdata = mnistDir + '/t10k';
 

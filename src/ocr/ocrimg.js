@@ -53,46 +53,55 @@ module.exports = ebocrimg = (imgdata, w, h) => {
         }
       }
     }
-    const normFactor = 1000 * (nh / h) * (nw / w);
+    const normFactor = 100 * (nh / h) * (nw / w);
     const newImgdata = scaledImgData.map(pix => Math.floor(pix * normFactor));
     return ebocrimg(newImgdata, nw, nh);
   };
 
-  const computeHalfstepImage = (nh, nw) => {
-    const [nh2, nw2] = [nh + 1, nw + 1];
-    const tmpImage = scaleDown(nh2, nw2);
-    // tmpImage.dump(true);
-    const tdata = tmpImage.imgdata;
-
-    const img = range(nh * nw).map(() => 0);
-    for (let r = 0; r < nh; r++) {
-      for (let c = 0; c < nw; c++) {
-        img[r * nw + c] =
-          tdata[(r + 0) * nw2 + (c + 0)] +
-          tdata[(r + 1) * nw2 + (c + 0)] +
-          tdata[(r + 0) * nw2 + (c + 1)] +
-          tdata[(r + 1) * nw2 + (c + 1)];
-      }
+  createImageWithMargin = () => {
+    const MAXRATIO = 4;
+    const ratio = w / h;
+    if (ratio < MAXRATIO && ratio > 1 / MAXRATIO)
+      return api;
+    // aspect ratio too large/small
+    let nw; let nh;
+    if (ratio >= MAXRATIO) {
+      nw = w;
+      nh = h * 6 / 8;
+    } else {
+      newnr = nr;
+      newnc = nr * 6 / 8;
     }
-    return ebocrimg(img, nw, nh);
-  };
+    if (ratio < MAXRATIO) {
+      for (let r = 0; r < newnr; r++)
+        for (let c = 0; c < nc; c++)
+          X.set((newnc - nc) / 2 + c, r, get(c, r));
+    }
+    else {
+      for (let c = 0; c < newnc; c++)
+        for (let r = 0; r < h; r++)
+          X.set(c, (newnr - h) / 2 + r, get(c, r));
+      // saveTiff( newimg, "c:\\temp\\newimg.tif" );
+    }
+    return X;
+  }
 
-  const cropGlyph = ()=>  {
+  const cropGlyph = () => {
     const rect = box(BLACK);
     const [nh, nw] = [rect.rmax - rect.rmin + 1, rect.cmax - rect.cmin + 1];
 
-    const img = Array(nh * nw);
+    const newImgdata = Array(nh * nw);
     for (let r = 0; r < nh; r++) {
       const rr1 = r * nw;
       const rr2 = (rect.rmin + r) * w;
       for (let c = 0; c < nw; c++) {
-        img[rr1 + c] = imgdata[rr2 + rect.cmin + c];
+        newImgdata[rr1 + c] = imgdata[rr2 + rect.cmin + c];
       }
     }
-    return ebocrimg(img, nw, nh);
+    return ebocrimg(newImgdata, nw, nh);
   };
 
-  const despeckle =  (N) => {
+  const despeckle = (N) => {
     N = N || 3;
     const despeckle2 = COLOR => {
       // Flecken <= N Pixel werden entfernt
@@ -192,7 +201,7 @@ module.exports = ebocrimg = (imgdata, w, h) => {
     return 0;
   };
 
-  const extractGlyph = () => {
+   const extractGlyph = () => {
     const GLYPHPART_MINSIZE = 3;
     const irect = { rmin: 0, rmax: h, cmin: 0, cmax: w };
     const parts = [];
@@ -271,13 +280,13 @@ module.exports = ebocrimg = (imgdata, w, h) => {
   const api = {
     frompng,
     despeckle,
+    isInverted,
     invert,
     adjustBW,
     cropGlyph,
     extractGlyph,
     scaleUp,
     scaleDown,
-    computeHalfstepImage,
     dump,
     getPix,
     imgdata,
