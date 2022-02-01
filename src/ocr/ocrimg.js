@@ -100,6 +100,20 @@ module.exports = ebocrimg = (imgdata, w, h) => {
     }
     return ebocrimg(newImgdata, nw, nh);
   };
+  const cropGlyphInner = () => {
+    const rect = innerbox(BLACK);
+    const [nh, nw] = [rect.rmax - rect.rmin + 1, rect.cmax - rect.cmin + 1];
+
+    const newImgdata = Array(nh * nw);
+    for (let r = 0; r < nh; r++) {
+      const rr1 = r * nw;
+      const rr2 = (rect.rmin + r) * w;
+      for (let c = 0; c < nw; c++) {
+        newImgdata[rr1 + c] = imgdata[rr2 + rect.cmin + c];
+      }
+    }
+    return ebocrimg(newImgdata, nw, nh);
+  };
 
   const despeckle = (N) => {
     N = N || 3;
@@ -145,6 +159,47 @@ module.exports = ebocrimg = (imgdata, w, h) => {
     }
     return { rmin, rmax, cmin, cmax };
   };
+  innerbox = () => {
+    const findInRow = (r) => {
+      const rr = r * w;
+      foundInRow = false;
+      for (let c = 0; c < w && !foundInRow; c++) {
+        if (imgdata[c + rr] === BLACK) foundInRow = true;
+      }
+      return foundInRow;
+    }
+    const findInCol = (c) => {
+      foundInCol = false;
+      for (let r = 0; r < h && !foundInCol; c++) {
+        if (imgdata[r * w + c] === BLACK) foundInCol = true;
+      }
+      return foundInCol;
+    }
+    const [hm, wm] = [Math.floor(h / 2), Math.floor(w / 2)];
+    let [rmin, rmax, cmin, cmax] = [hm, hm, wm, wm];
+
+    let foundInRow = true;
+    for (let r = hm; r > 0 && foundInRow; r--) {
+      foundInRow = findInRow(r);
+      rmin = foundInRow ? r : rmin;
+    }
+    foundInRow = true;
+    for (let r = hm; r < h && foundInRow; r++) {
+      foundInRow = findInRow(r);
+      rmax = foundInRow ? r : rmax;
+    }
+    let foundInCol = true;
+    for (let c = wm; c > 0 && foundInCol; c--) {
+      foundInCol = findInCol(c);
+      cmin = foundInCol ? c : cmin;
+    }
+    foundInCol = true;
+    for (let c = wm; c < w && foundInCol; c++) {
+      foundInCol = findInCol(c);
+      cmax = foundInCol ? c : cmax;
+    }
+    return { rmin, rmax, cmin, cmax };
+  }
 
   const expandbox = rect => {
     const marginr = Math.floor(h / 15);
@@ -201,7 +256,7 @@ module.exports = ebocrimg = (imgdata, w, h) => {
     return 0;
   };
 
-   const extractGlyph = () => {
+  const extractGlyph = () => {
     const GLYPHPART_MINSIZE = 3;
     const irect = { rmin: 0, rmax: h, cmin: 0, cmax: w };
     const parts = [];
@@ -284,6 +339,7 @@ module.exports = ebocrimg = (imgdata, w, h) => {
     invert,
     adjustBW,
     cropGlyph,
+    cropGlyphInner,
     extractGlyph,
     scaleUp,
     scaleDown,

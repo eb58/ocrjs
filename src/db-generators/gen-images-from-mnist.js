@@ -19,10 +19,10 @@ const ocrMnistImageGenerator = (prefix) => {
 
   const createPng = imageData => {
     const png = new PNG({ width: 28, height: 28, filterType: -1 });
-    for (var y = 0; y < png.height; y++) {
-      for (var x = 0; x < png.width; x++) {
-        var n = png.width * y + x;
-        var idx = n * 4;
+    for (let y = 0; y < png.height; y++) {
+      for (let x = 0; x < png.width; x++) {
+        const n = png.width * y + x;
+        const idx = n * 4;
         const val = imageData[n] > 100 ? 0 : 255;
         png.data[idx + 0] = png.data[idx + 1] = png.data[idx + 2] = val;
         png.data[idx + 3] = 255;
@@ -33,8 +33,8 @@ const ocrMnistImageGenerator = (prefix) => {
 
   const createPng2 = (imageData, width, height) => {
     const png = new PNG({ width, height, filterType: -1 });
-    for (var y = 0; y < png.width; y++) {
-      for (var x = 0; x < png.height; x++) {
+    for (let y = 0; y < png.width; y++) {
+      for (let x = 0; x < png.height; x++) {
         const n = png.width * y + x;
         const idx = n * 4;
         png.data[idx + 0] = png.data[idx + 1] = png.data[idx + 2] = imageData[n] ? 255 : 0;

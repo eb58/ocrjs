@@ -2,16 +2,9 @@ const fs = require('fs');
 const range = n => [...Array(n).keys()];
 const ocrengine = require('../src/ocr/ocr')();
 
-const ebhs_train_5x3 = require(`../data/dbjs/train/ebhs-train-5x3`);
-const ebhs_train_6x4 = require(`../data/dbjs/train/ebhs-train-6x4`);
-const ebhs_train_7x5 = require(`../data/dbjs/train/ebhs-train-7x5`);
-const ebhs_train_8x6 = require(`../data/dbjs/train/ebhs-train-8x6`);
-
 const ebdb_train_6x4 = require(`../data/dbjs/train/ebdb-train-6x4`);
 const ebdb_train_7x5 = require(`../data/dbjs/train/ebdb-train-7x5`);
 const ebdb_train_8x6 = require(`../data/dbjs/train/ebdb-train-8x6`);
-const ebdb_train_9x7 = require(`../data/dbjs/train/ebdb-train-9x7`);
-const ebdb_train_11x8 = require(`../data/dbjs/train/ebdb-train-11x8`);
 
 const mnistdb_train_6x4 = require(`../data/dbjs/train/mnist-db-train-6x4`);
 const mnistdb_train_7x5 = require(`../data/dbjs/train/mnist-db-train-7x5`);
@@ -102,13 +95,13 @@ const imgtest = (opts) => {
 
 };
 
-const ebdbs = [ebdb_train_6x4];
+const ebdbs = [ebdb_train_6x4,ebdb_train_7x5,ebdb_train_8x6];
 const mnistdbs = [mnistdb_train_6x4, mnistdb_train_7x5, mnistdb_train_8x6]
 
 const opts_ebdb = {
   dbs: ebdbs,
   nImages2TestBegin: 0,
-  nImages2Test: 2000,
+  nImages2Test: 100,
   path2Testdata: ebdbDir + 'test',
 };
 

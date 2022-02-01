@@ -30,7 +30,7 @@ const generateDBsForEBData = (dimr, dimc, traindata, testdata, prefix) => {
   );
   const prepareImgTest = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
   const computeImageTest = (xdir, name, dimr, dimc) => prepareImgTest(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
-  0 && fs.writeFileSync(
+  fs.writeFileSync(
     `data/dbjs/test/${prefix}-test-${dimstr}.js`,
     'module.exports = ' + JSON.stringify(genEBDB(testdata, dimr, dimc, computeImageTest))
   );
@@ -46,8 +46,6 @@ if (1) {
   generateDBsForEBData(6, 4, traindata, testdata, 'ebdb');
   generateDBsForEBData(7, 5, traindata, testdata, 'ebdb');
   generateDBsForEBData(8, 6, traindata, testdata, 'ebdb');
-  generateDBsForEBData(9, 7, traindata, testdata, 'ebdb');
-  //generateDBsForEBData(11, 8, traindata, testdata, 'ebdb');
 }
 
 if (0) {
