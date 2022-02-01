@@ -11,7 +11,8 @@
    "scripts": {
       "start": "node tests/main.js",
       "debug": "node --inspect-brk tests/main.js ",
-      "gen-ebdb": "node src/db-generators/gen-ocrebdb",
+      "gen-ebdb":    "node src/db-generators/gen-ocr-ebdb",
+      "gen-mnistdb": "node src/db-generators/gen-ocr-mnistdb",
       "gen-images-from-mnist": "node src/db-generators/gen-images-from-mnist",
       "test": "jest",
       "testWatch": "jest --watch",
