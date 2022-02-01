@@ -4,11 +4,11 @@ const ocrMnistImageGenerator = (prefix) => {
   const fs = require('fs');
   const mkdirp = require('mkdirp');
   const PNG = require('pngjs').PNG;
-  const ocrimg = require('../ocr/ocrimg');
+  const ocrimg = require('../ocrimg');
 
   const DIM = 28;
   const DIMSQR = DIM * DIM;
-  const mnistpath = 'data/mnist/';
+  const mnistpath = 'data/';
 
   range(10).forEach(digit => mkdirp.sync('/temp/' + prefix + '/img' + digit));
 
@@ -56,5 +56,5 @@ const ocrMnistImageGenerator = (prefix) => {
     }
   });
 };
-ocrMnistImageGenerator('t10k');
+ocrMnistImageGenerator('test');
 ocrMnistImageGenerator('train');
