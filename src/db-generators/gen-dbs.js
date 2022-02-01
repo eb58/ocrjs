@@ -25,20 +25,20 @@ const generateDBsForEBData = (dimr, dimc, traindata, testdata, prefix) => {
   const prepareImgTrain = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().despeckle().cropGlyph().scaleDown(dimr, dimc);
   const computeImageTrain = (xdir, name, dimr, dimc) => prepareImgTrain(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
   fs.writeFileSync(
-    `data/dbs/train/${prefix}-train-${dimstr}.js`,
+    `data/dbs/${prefix}-train-${dimstr}.js`,
     'module.exports = ' + JSON.stringify(genEBDB(traindata, dimr, dimc, computeImageTrain))
   );
   const prepareImgTest = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
   const computeImageTest = (xdir, name, dimr, dimc) => prepareImgTest(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
   fs.writeFileSync(
-    `data/dbs/test/${prefix}-test-${dimstr}.js`,
+    `data/dbs/${prefix}-test-${dimstr}.js`,
     'module.exports = ' + JSON.stringify(genEBDB(testdata, dimr, dimc, computeImageTest))
   );
 };
 
 if (1) {
-  const traindata = 'data/imgs/ebdb/train';
-  const testdata = 'data/imgs/ebdb/test';
+  const traindata = 'data/imgs/eb/train';
+  const testdata = 'data/imgs/eb/test';
   generateDBsForEBData(6, 4, traindata, testdata, 'eb-db');
   generateDBsForEBData(7, 5, traindata, testdata, 'eb-db');
   generateDBsForEBData(8, 6, traindata, testdata, 'eb-db');

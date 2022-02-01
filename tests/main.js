@@ -2,41 +2,40 @@ const fs = require('fs');
 const range = n => [...Array(n).keys()];
 const ocrengine = require('../src/ocr')();
 
-const ebdb_train_6x4 = require(`../data/dbs/eb-db-train-6x4`);
-const ebdb_train_7x5 = require(`../data/dbs/eb-db-train-7x5`);
-const ebdb_train_8x6 = require(`../data/dbs/eb-db-train-8x6`);
+const ebdb_train_6x4 = require(`../data/dbs/eb-db-train-6x4`)
+const ebdb_train_7x5 = require(`../data/dbs/eb-db-train-7x5`)
+const ebdb_train_8x6 = require(`../data/dbs/eb-db-train-8x6`)
 
-const mnistdb_train_6x4 = require(`../data/dbs/mnist-db-train-6x4`);
-const mnistdb_train_7x5 = require(`../data/dbs/mnist-db-train-7x5`);
-const mnistdb_train_8x6 = require(`../data/dbs/mnist-db-train-8x6`);
+const mnistdb_train_6x4 = require(`../data/dbs/mnist-db-train-6x4`)
+const mnistdb_train_7x5 = require(`../data/dbs/mnist-db-train-7x5`)
+const mnistdb_train_8x6 = require(`../data/dbs/mnist-db-train-8x6`)
 
-const dbs_eb = [ebdb_train_6x4, ebdb_train_7x5, ebdb_train_6x4]
+const dbs_eb = [ebdb_train_6x4, ebdb_train_7x5, ebdb_train_8x6]
 const dbs_mnist = [mnistdb_train_6x4, mnistdb_train_7x5, mnistdb_train_8x6]
 const opts1 = {
   dbs: dbs_eb,
   nImages2TestBegin: 0,
   nImages2Test: 100,
   path2Testdata: 'data/imgs/eb/test',
-};
+}
 const opts2 = {
-  // dbs: [ebdb_train_6x4],
-  dbs: [mnistdb_train_6x4, mnistdb_train_7x5, mnistdb_train_8x6],
+  dbs: dbs_mnist,
   nImages2TestBegin: 0,
   nImages2Test: 100,
   path2Testdata: 'data/imgs/mnist/test',
-};
+}
 
 const opts = opts1
 
 if (0) {
   const imgFile = "c:/temp/mnist-0-1197.png"
-  const res = ocrengine.recognizeImage(imgFile, ebdbs);
-  console.log(res);
+  const res = ocrengine.recognizeImage(imgFile, ebdbs)
+  console.log(res)
 }
 
 const imgtest = (opts) => {
-  const dateStart = new Date();
-  const badResults = [];
+  const dateStart = new Date()
+  const badResults = []
   const statistics = {
     cnt: 0,
     ok: 0,
@@ -65,7 +64,7 @@ const imgtest = (opts) => {
 
   const projectPath = '/Users/erich/OneDrive/Dokumente/JavascriptProjekte/ocrjs/'
   const generateHtmlReportOfBadResults = () => {
-    const path2Traindata = (projectPath + mnistdb_train_6x4.dir).replaceAll("\/", "\\");
+    const path2Traindata = projectPath + opts.dbs[0].dir
     statistics.procent = ((statistics.ok * 100) / statistics.cnt).toFixed(2);
     statistics.secureprocent = ((statistics.secure * 100) / statistics.cnt).toFixed(2);
     statistics.time = ((new Date() - dateStart) / 1000).toFixed(2) + ' sec';
@@ -86,9 +85,9 @@ const imgtest = (opts) => {
         <td><img src="${projectPath}${badResult.imgfile}" style="height:50px"></td>
         <td>${badResult.digit}</td>
         <td>${(res[1].dist / res[0].dist).toFixed(2)} </td>
-        <td><div>Digit:${res[0].digit} Dist:${res[0].dist}</div><img src="${path2Traindata}\\img${res[0].digit}\\${res[0].name}" style="height:50px"></td>
-        <td><div>Digit:${res[1].digit} Dist:${res[1].dist}</div><img src="${path2Traindata}\\img${res[1].digit}\\${res[1].name}" style="height:50px"></td>
-        <td><div>Digit:${res[2].digit} Dist:${res[2].dist}</div><img src="${path2Traindata}\\img${res[2].digit}\\${res[2].name}" style="height:50px"></td>
+        <td><div>Digit:${res[0].digit} Dist:${res[0].dist}</div><img src="${path2Traindata}/img${res[0].digit}/${res[0].name}" style="height:50px"></td>
+        <td><div>Digit:${res[1].digit} Dist:${res[1].dist}</div><img src="${path2Traindata}/img${res[1].digit}/${res[1].name}" style="height:50px"></td>
+        <td><div>Digit:${res[2].digit} Dist:${res[2].dist}</div><img src="${path2Traindata}/img${res[2].digit}/${res[2].name}" style="height:50px"></td>
       </tr>`}
       , '');
 
