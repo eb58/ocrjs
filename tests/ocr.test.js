@@ -16,11 +16,10 @@ const run = (dim, dbtrainprefix, dbtestprefix) => {
       counter.ok += ocrengine.findNearestDigit(checkDigit.imgvec, dbtrain)[0].digit === n;;
     })
   })
-  console.log(counter.ok / counter.all)
   return counter.ok / counter.all
 };
 
-run('6x4', 'eb')
+console.log(run('6x4', 'mnist', 'eb'))
 // test('ocr 6x4', () => expect(run('6x4', 'mnist')).toBeGreaterThan(0.965))
 //test('ocr 7x5', () => expect(run('7x5', 'eb-db')).toBeGreaterThan(0.97))
 // test('ocr 8x6', () => expect(run('8x6', 'eb-db')).toBeGreaterThan(0.97))

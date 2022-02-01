@@ -10,24 +10,29 @@ const mnistdb_train_6x4 = require(`../data/dbs/mnist-db-train-6x4`);
 const mnistdb_train_7x5 = require(`../data/dbs/mnist-db-train-7x5`);
 const mnistdb_train_8x6 = require(`../data/dbs/mnist-db-train-8x6`);
 
-const ebdbs = [ebdb_train_6x4,ebdb_train_7x5,ebdb_train_8x6]
-const mnistdbs = [mnistdb_train_6x4, mnistdb_train_7x5, mnistdb_train_8x6]
-const dbs = ebdbs
-
-const opts = {
-  dbs,
+const dbs_eb = [ebdb_train_6x4, ebdb_train_7x5, ebdb_train_6x4]
+const dbs_mnist = [mnistdb_train_6x4, mnistdb_train_7x5, mnistdb_train_8x6]
+const opts1 = {
+  dbs: dbs_eb,
   nImages2TestBegin: 0,
   nImages2Test: 100,
   path2Testdata: 'data/imgs/eb/test',
 };
+const opts2 = {
+  // dbs: [ebdb_train_6x4],
+  dbs: [mnistdb_train_6x4, mnistdb_train_7x5, mnistdb_train_8x6],
+  nImages2TestBegin: 0,
+  nImages2Test: 100,
+  path2Testdata: 'data/imgs/mnist/test',
+};
 
+const opts = opts1
 
 if (0) {
   const imgFile = "c:/temp/mnist-0-1197.png"
   const res = ocrengine.recognizeImage(imgFile, ebdbs);
   console.log(res);
 }
-
 
 const imgtest = (opts) => {
   const dateStart = new Date();
@@ -52,14 +57,15 @@ const imgtest = (opts) => {
     if (digit !== res[0].digit) {
       const name = imgfile.split('/').reverse()[0];
       badResults.push({ digit, res, imgfile });
-      console.log(digit, (res[1].dist / res[0].dist).toFixed(2), JSON.stringify(res));
-      console.log(imgfile);
+      // console.log(digit, (res[1].dist / res[0].dist).toFixed(2), JSON.stringify(res));
+      // console.log(imgfile);
       fs.copyFileSync(imgfile, `/temp/mnist-${name}`);
     }
   }
 
-  const generateHtmlReportOfBadResults = () => { 
-    const path2Traindata = mnistdb_train_6x4.dir;
+  const projectPath = '/Users/erich/OneDrive/Dokumente/JavascriptProjekte/ocrjs/'
+  const generateHtmlReportOfBadResults = () => {
+    const path2Traindata = (projectPath + mnistdb_train_6x4.dir).replaceAll("\/", "\\");
     statistics.procent = ((statistics.ok * 100) / statistics.cnt).toFixed(2);
     statistics.secureprocent = ((statistics.secure * 100) / statistics.cnt).toFixed(2);
     statistics.time = ((new Date() - dateStart) / 1000).toFixed(2) + ' sec';
@@ -68,29 +74,35 @@ const imgtest = (opts) => {
       <tr>
         <td>Zu erkennen</td>
         <td>Soll</td>
-        <td>Ist</td>
         <td>Konfidenz</td>
         <td>Kandidat1</td>
         <td>Kandidat2</td>
         <td>Kandidat3</td>
       </tr>`
-    const tableRows = badResults.reduce((acc, badResult) => acc + `
+    const tableRows = badResults.reduce((acc, badResult) => {
+      const res = badResult.res;
+      return acc + `
       <tr>
-        <td><img src="${badResult.imgfile}" style="height:50px"></td>
+        <td><img src="${projectPath}${badResult.imgfile}" style="height:50px"></td>
         <td>${badResult.digit}</td>
-        <td>${badResult.res[0].digit}</td>
-        <td>${(badResult.res[1].dist / badResult.res[0].dist).toFixed(2)} </td>
-        <td><div>Digit:${badResult.res[0].digit} Dist:${badResult.res[0].dist}</div><img src="${path2Traindata}/img${badResult.res[0].digit}/${badResult.res[0].name}" style="height:50px"></td>
-        <td><div>Digit:${badResult.res[0].digit} Dist:${badResult.res[1].dist}</div><img src="${path2Traindata}/img${badResult.res[1].digit}/${badResult.res[1].name}" style="height:50px"></td>
-        <td><div>Digit:${badResult.res[0].digit} Dist:${badResult.res[2].dist}</div><img src="${path2Traindata}/img${badResult.res[2].digit}/${badResult.res[2].name}" style="height:50px"></td>
-      </tr>`
+        <td>${(res[1].dist / res[0].dist).toFixed(2)} </td>
+        <td><div>Digit:${res[0].digit} Dist:${res[0].dist}</div><img src="${path2Traindata}\\img${res[0].digit}\\${res[0].name}" style="height:50px"></td>
+        <td><div>Digit:${res[1].digit} Dist:${res[1].dist}</div><img src="${path2Traindata}\\img${res[1].digit}\\${res[1].name}" style="height:50px"></td>
+        <td><div>Digit:${res[2].digit} Dist:${res[2].dist}</div><img src="${path2Traindata}\\img${res[2].digit}\\${res[2].name}" style="height:50px"></td>
+      </tr>`}
       , '');
-    fs.writeFileSync(opts.outFile || 'c:/temp/t.html', `
-    <pre>${JSON.stringify(statistics)}</pre>
+
+    const content = `
+    <pre>
+      Traindata from: ${opts.dbs[0].dir}
+      Testdata  from: ${opts.path2Testdata}
+      ${JSON.stringify(statistics)}
+    </pre>
     <table border=1>
         ${tableHeader}
         ${tableRows}
-    </table>`);
+    </table>`
+    fs.writeFileSync(opts.outFile || 'c:/temp/t.html', content);
   }
 
   const processFile = (path, digit) => {
