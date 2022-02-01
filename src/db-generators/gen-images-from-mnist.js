@@ -23,8 +23,7 @@ const ocrMnistImageGenerator = (prefix) => {
       for (let x = 0; x < png.width; x++) {
         const n = png.width * y + x;
         const idx = n * 4;
-        const val = imageData[n] > 100 ? 0 : 255;
-        png.data[idx + 0] = png.data[idx + 1] = png.data[idx + 2] = val;
+        png.data[idx + 0] = png.data[idx + 1] = png.data[idx + 2] = imageData[n] > 100 ? 0 : 255;
         png.data[idx + 3] = 255;
       }
     }

@@ -81,7 +81,6 @@ module.exports = ebocrimg = (imgdata, w, h) => {
       for (let c = 0; c < newnc; c++)
         for (let r = 0; r < h; r++)
           X.set(c, (newnr - h) / 2 + r, get(c, r));
-      // saveTiff( newimg, "c:\\temp\\newimg.tif" );
     }
     return X;
   }

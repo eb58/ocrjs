@@ -3,17 +3,17 @@ const fs = require('fs');
 const PNG = require('pngjs').PNG;
 const ocrimg = require('../ocrimg');
 
+const isPNG = fname => fname.endsWith('.png')
+
 const genEBDB = (dir, dimr, dimc, computeImage) => {
-  const ebdb = Object.assign({ dimr, dimc, dir }, range(10).reduce((acc, i) => ((acc[i] = []), acc), {}));
+  const ebdb = { dimr, dimc, dir };
 
   range(10).forEach(digit => {
     const xdir = dir + '/img' + digit + '/';
     console.log('working on ' + xdir + ' ...');
-    fs.readdirSync(xdir)
-      .filter(fname => fname.includes('.png'))
-      .forEach((name) => {
-        ebdb[digit].push({ imgvec: computeImage(xdir, name, dimr, dimc).imgdata, name });
-      })
+    ebdb[digit] = fs.readdirSync(xdir)
+      .filter(isPNG)
+      .map((name) => ({ imgvec: computeImage(xdir, name, dimr, dimc).imgdata, name }));
   });
   return ebdb;
 };
@@ -22,12 +22,16 @@ const generateDBsForEBData = (dimr, dimc, traindata, testdata, prefix) => {
   const dimstr = `${dimr}x${dimc}`;
   console.log('generateDBs: ', prefix, dimstr, '...');
 
+  // generate training db
   const prepareImgTrain = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().despeckle().cropGlyph().scaleDown(dimr, dimc);
   const computeImageTrain = (xdir, name, dimr, dimc) => prepareImgTrain(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
   fs.writeFileSync(
     `data/dbs/${prefix}-train-${dimstr}.js`,
     'module.exports = ' + JSON.stringify(genEBDB(traindata, dimr, dimc, computeImageTrain))
   );
+
+
+  // generate test db
   const prepareImgTest = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
   const computeImageTest = (xdir, name, dimr, dimc) => prepareImgTest(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
   fs.writeFileSync(
