@@ -15,7 +15,7 @@ const dbs_mnist = [mnistdb_train_6x4, mnistdb_train_7x5, mnistdb_train_8x6]
 const opts1 = {
   dbs: dbs_eb,
   nImages2TestBegin: 0,
-  nImages2Test: 100,
+  nImages2Test: 2000,
   path2Testdata: 'data/imgs/eb/test',
 }
 const opts2 = {
@@ -27,9 +27,9 @@ const opts2 = {
 
 const opts = opts1
 
-if (0) {
-  const imgFile = "c:/temp/mnist-0-1197.png"
-  const res = ocrengine.recognizeImage(imgFile, ebdbs)
+if (1) {
+  const imgFile = "/Users/erich/OneDrive/Dokumente/JavascriptProjekte/ocrjs/data/imgs/eb/test/img0/0_0_1__aliste_TestListenH_Neu_rechserv_region1_04_29_101_1_3042191h_1.tif.png"
+  const res = ocrengine.recognizeImage(imgFile, dbs_eb)
   console.log(res)
 }
 

@@ -8,6 +8,16 @@ const ocr = () => {
   const feed = (x, f) => f(x)
   const cmp = (x, y) => (x === y ? 0 : x < y ? -1 : +1)
   const cmpBy = (proj) => (x, y) => cmp(proj(x), proj(y))
+  // const zip = (xs, ys, f) => xs.map((x, i) => f ? f(xs[i], ys[i]) : [xs[i], ys[i]])
+  // const sum = (xs) => xs.reduce((acc, x) => acc + x, 0)
+  //const distFct = (v1, v2) => sum(zip(v1, v2, (x, y) => sqr(x - y)))
+  const distFct = (v1, v2) => {
+    let sum = 0;
+    for (let i = 0; i < v1.length; i++) {
+      sum += sqr(v1[i] - v2[i]);
+    }
+    return sum;
+  }
 
   const mdist = () => {
     let minDist = Number.MAX_SAFE_INTEGER;
@@ -21,7 +31,6 @@ const ocr = () => {
       return sum;
     };
   };
-  const distFct = ((v1, v2) => v1.reduce((d, _, i) => d + sqr(v1[i] - v2[i]), 0));
 
   const findNearestDigit = (imgvec, db) => range(10)
     .map(digit => ({ digit, dist: Number.MAX_SAFE_INTEGER }))
@@ -55,5 +64,5 @@ const ocr = () => {
 }
 
 if (typeof module === 'object' && typeof module.exports === 'object') {
-  module.exports = ocr; 
+  module.exports = ocr;
 }
