@@ -55,5 +55,5 @@ const ocr = () => {
 }
 
 if (typeof module === 'object' && typeof module.exports === 'object') {
-  module.exports = ocr;
+  module.exports = ocr; 
 }

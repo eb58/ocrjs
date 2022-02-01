@@ -1,20 +1,33 @@
 const fs = require('fs');
 const range = n => [...Array(n).keys()];
-const ocrengine = require('../src/ocr/ocr')();
+const ocrengine = require('../src/ocr')();
 
-const ebdb_train_6x4 = require(`../data/dbjs/train/ebdb-train-6x4`);
-const ebdb_train_7x5 = require(`../data/dbjs/train/ebdb-train-7x5`);
-const ebdb_train_8x6 = require(`../data/dbjs/train/ebdb-train-8x6`);
+const ebdb_train_6x4 = require(`../data/dbs/eb-db-train-6x4`);
+const ebdb_train_7x5 = require(`../data/dbs/eb-db-train-7x5`);
+const ebdb_train_8x6 = require(`../data/dbs/eb-db-train-8x6`);
 
-const mnistdb_train_6x4 = require(`../data/dbjs/train/mnist-db-train-6x4`);
-const mnistdb_train_7x5 = require(`../data/dbjs/train/mnist-db-train-7x5`);
-const mnistdb_train_8x6 = require(`../data/dbjs/train/mnist-db-train-8x6`);
+const mnistdb_train_6x4 = require(`../data/dbs/mnist-db-train-6x4`);
+const mnistdb_train_7x5 = require(`../data/dbs/mnist-db-train-7x5`);
+const mnistdb_train_8x6 = require(`../data/dbs/mnist-db-train-8x6`);
 
-const imgsdir = 'C:/Users/erich/Documents/JavascriptProjekte/ocrjs/data/imgs/';
-const ebdbDir = imgsdir + 'ebdb/';
-const mnistDir = imgsdir + 'mnist/'
+const ebdbs = [ebdb_train_6x4,ebdb_train_7x5,ebdb_train_8x6]
+const mnistdbs = [mnistdb_train_6x4, mnistdb_train_7x5, mnistdb_train_8x6]
+const dbs = ebdbs
 
-const date = Date.now();
+const opts = {
+  dbs,
+  nImages2TestBegin: 0,
+  nImages2Test: 100,
+  path2Testdata: 'data/imgs/eb/test',
+};
+
+
+if (0) {
+  const imgFile = "c:/temp/mnist-0-1197.png"
+  const res = ocrengine.recognizeImage(imgFile, ebdbs);
+  console.log(res);
+}
+
 
 const imgtest = (opts) => {
   const dateStart = new Date();
@@ -45,8 +58,8 @@ const imgtest = (opts) => {
     }
   }
 
-  const generateHtmlReportOfBadResults = () => {
-    const path2Traindata = ebdb_train_6x4.dir;
+  const generateHtmlReportOfBadResults = () => { 
+    const path2Traindata = mnistdb_train_6x4.dir;
     statistics.procent = ((statistics.ok * 100) / statistics.cnt).toFixed(2);
     statistics.secureprocent = ((statistics.secure * 100) / statistics.cnt).toFixed(2);
     statistics.time = ((new Date() - dateStart) / 1000).toFixed(2) + ' sec';
@@ -54,8 +67,8 @@ const imgtest = (opts) => {
     const tableHeader = `
       <tr>
         <td>Zu erkennen</td>
-        <td>Korrekt</td>
-        <td>Erkannt</td>
+        <td>Soll</td>
+        <td>Ist</td>
         <td>Konfidenz</td>
         <td>Kandidat1</td>
         <td>Kandidat2</td>
@@ -92,31 +105,6 @@ const imgtest = (opts) => {
 
   range(10).forEach(digit => handleDigit(digit));
   generateHtmlReportOfBadResults();
-
 };
 
-const ebdbs = [ebdb_train_6x4,ebdb_train_7x5,ebdb_train_8x6];
-const mnistdbs = [mnistdb_train_6x4, mnistdb_train_7x5, mnistdb_train_8x6]
-
-const opts_ebdb = {
-  dbs: ebdbs,
-  nImages2TestBegin: 0,
-  nImages2Test: 100,
-  path2Testdata: ebdbDir + 'test',
-};
-
-const opts_mnistdb = {
-  dbs: ebdbs,
-  nImages2TestBegin: 2500,
-  nImages2Test: 3000,
-  path2Testdata: mnistDir + 'train',
-};
-
-if (0) {
-  // const imgFile = "C:/Users/erich/Documents/JavascriptProjekte/ocrjs/data/imgs/mnist/train/img1/1-1012.png";
-  const imgFile = "C:/Users/erich/Documents/JavascriptProjekte/ocrjs/data/imgs/mnist/train/img3/3-10330.png"
-  const res = ocrengine.recognizeImage(imgFile, ebdbs);
-  console.log(res);
-}
-//imgtest(opts_mnistdb);
-imgtest(opts_ebdb);
+imgtest(opts);

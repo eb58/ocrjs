@@ -9,14 +9,10 @@
    "license": "MIT",
    "description": "ocr for handwritten digits",
    "scripts": {
-      "start": "node tests/main.js",
-      "debug": "node --inspect-brk tests/main.js ",
-      "gen-ebdb":    "node src/db-generators/gen-ocr-ebdb",
-      "gen-mnistdb": "node src/db-generators/gen-ocr-mnistdb",
+      "gen-dbs": "node src/db-generators/gen-dbs",
       "gen-images-from-mnist": "node src/db-generators/gen-images-from-mnist",
       "test": "jest",
-      "testWatch": "jest --watch",
-      "changedpi": "node tests/test-changedpi.js"
+      "testWatch": "jest --watch"
    },
    "author": "eb",
    "contributors": [
@@ -32,7 +28,7 @@
       "eslint-config-prettier": "6.11.0",
       "eslint-plugin-prettier": "3.1.4",
       "jest": "^26.4.2",
-      "prettier": "^2.1.1",
+      "prettier": "^2.5.1",
       "watch": "^1.0.2"
    }
 }

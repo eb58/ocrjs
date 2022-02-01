@@ -1,7 +1,7 @@
 const range = n => [...Array(n).keys()];
 const fs = require('fs');
 const PNG = require('pngjs').PNG;
-const ocrimg = require('../ocr/ocrimg');
+const ocrimg = require('../ocrimg');
 
 const genEBDB = (dir, dimr, dimc, computeImage) => {
   const ebdb = Object.assign({ dimr, dimc, dir }, range(10).reduce((acc, i) => ((acc[i] = []), acc), {}));
@@ -24,35 +24,29 @@ const generateDBsForEBData = (dimr, dimc, traindata, testdata, prefix) => {
 
   const prepareImgTrain = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().despeckle().cropGlyph().scaleDown(dimr, dimc);
   const computeImageTrain = (xdir, name, dimr, dimc) => prepareImgTrain(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
-    fs.writeFileSync(
-    `data/dbjs/train/${prefix}-train-${dimstr}.js`,
+  fs.writeFileSync(
+    `data/dbs/train/${prefix}-train-${dimstr}.js`,
     'module.exports = ' + JSON.stringify(genEBDB(traindata, dimr, dimc, computeImageTrain))
   );
   const prepareImgTest = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
   const computeImageTest = (xdir, name, dimr, dimc) => prepareImgTest(PNG.sync.read(fs.readFileSync(xdir + name)), dimr, dimc);
   fs.writeFileSync(
-    `data/dbjs/test/${prefix}-test-${dimstr}.js`,
+    `data/dbs/test/${prefix}-test-${dimstr}.js`,
     'module.exports = ' + JSON.stringify(genEBDB(testdata, dimr, dimc, computeImageTest))
   );
 };
 
-const imgsdir = '../data/imgs/';
-
 if (1) {
-  const ebdbDir = imgsdir + 'ebdb/';
-  const traindata = ebdbDir + 'train';
-  const testdata = ebdbDir + 'test';
-
-  generateDBsForEBData(6, 4, traindata, testdata, 'ebdb');
-  generateDBsForEBData(7, 5, traindata, testdata, 'ebdb');
-  generateDBsForEBData(8, 6, traindata, testdata, 'ebdb');
+  const traindata = 'data/imgs/ebdb/train';
+  const testdata = 'data/imgs/ebdb/test';
+  generateDBsForEBData(6, 4, traindata, testdata, 'eb-db');
+  generateDBsForEBData(7, 5, traindata, testdata, 'eb-db');
+  generateDBsForEBData(8, 6, traindata, testdata, 'eb-db');
 }
 
-if (0) {
-  const mnistDir = imgsdir + 'mnist/';
-  const traindata = mnistDir + '/train';
-  const testdata = mnistDir + '/t10k';
-
+if (1) {
+  const traindata = 'data/imgs/mnist/train';
+  const testdata = 'data/imgs/mnist/test';
   generateDBsForEBData(6, 4, traindata, testdata, 'mnist-db');
   generateDBsForEBData(7, 5, traindata, testdata, 'mnist-db');
   generateDBsForEBData(8, 6, traindata, testdata, 'mnist-db');

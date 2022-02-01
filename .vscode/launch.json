@@ -1,17 +1,23 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "ocr.test.js",
             "type": "node",
+            "program": "${workspaceFolder}/tests/ocr.test.js",
             "request": "launch",
-            "name": "Launch Program",
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}\\tests\\main.js"
+        },
+        {
+            "name": "main.js",
+            "type": "node",
+            "program": "${workspaceFolder}/tests/main.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
         }
     ]
 }
