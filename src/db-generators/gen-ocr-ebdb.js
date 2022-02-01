@@ -36,7 +36,7 @@ const generateDBsForEBData = (dimr, dimc, traindata, testdata, prefix) => {
   );
 };
 
-const imgsdir = 'C:/Users/erich/Documents/JavascriptProjekte/ocrjs/data/imgs/';
+const imgsdir = '../data/imgs/';
 
 if (1) {
   const ebdbDir = imgsdir + 'ebdb/';
