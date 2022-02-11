@@ -18,6 +18,15 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
+        },
+        {
+            "name": "gen-dbs.js",
+            "type": "node",
+            "program": "${workspaceFolder}/src/db-generators/gen-dbs.js",
+            "request": "launch",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
         }
     ]
 }

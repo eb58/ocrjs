@@ -16,20 +16,20 @@ const opts1 = {
   dbs: dbs_eb,
   nImages2TestBegin: 0,
   nImages2Test: 2000,
-  path2Testdata: 'data/imgs/eb/test',
+  path2Testimages: 'data/imgs/eb/test',
 }
 const opts2 = {
   dbs: dbs_mnist,
   nImages2TestBegin: 0,
   nImages2Test: 100,
-  path2Testdata: 'data/imgs/mnist/test',
+  path2Testimages: 'data/imgs/mnist/test',
 }
 
 const opts = opts1
 
 if (1) {
-  const imgFile = "/Users/erich/OneDrive/Dokumente/JavascriptProjekte/ocrjs/data/imgs/eb/test/img0/0_0_1__aliste_TestListenH_Neu_rechserv_region1_04_29_101_1_3042191h_1.tif.png"
-  const res = ocrengine.recognizeImage(imgFile, dbs_eb)
+  const imgFile = "/Users/erich/OneDrive/Dokumente/JavascriptProjekte/ocrjs/data/imgs/eb/test/img0/0_0_0__aliste_TestListenH_Neu_rechserv_region1_17_23_053_0_3042020h_1.tif.png"
+  const res = ocrengine.recognizeImage(imgFile, opts.dbs)
   console.log(res)
 }
 
@@ -94,7 +94,7 @@ const imgtest = (opts) => {
     const content = `
     <pre>
       Traindata from: ${opts.dbs[0].dir}
-      Testdata  from: ${opts.path2Testdata}
+      Testdata  from: ${opts.path2Testimages}
       ${JSON.stringify(statistics)}
     </pre>
     <table border=1>
@@ -110,9 +110,9 @@ const imgtest = (opts) => {
     updateStatistics(res, digit, path)
   }
 
-  const handleDigit = (digit) => fs.readdirSync(opts.path2Testdata + '/img' + digit + '/')
+  const handleDigit = (digit) => fs.readdirSync(opts.path2Testimages + '/img' + digit + '/')
     .filter((fname, idx) => idx >= (opts.nImages2TestBegin || 0) && idx < opts.nImages2Test && fname.includes('.png'))
-    .forEach((fname) => processFile(opts.path2Testdata + '/img' + digit + '/' + fname, digit));
+    .forEach((fname) => processFile(opts.path2Testimages + '/img' + digit + '/' + fname, digit));
 
   range(10).forEach(digit => handleDigit(digit));
   generateHtmlReportOfBadResults();
