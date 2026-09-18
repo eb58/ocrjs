@@ -132,6 +132,12 @@ test('extractGlyph removes tiny regions and retains a connected glyph', () => {
   ]);
 });
 
+test('extractGlyph leaves a blank image unchanged instead of crashing', () => {
+  const image = createImage(Array(9).fill(0), 3, 3).extractGlyph();
+
+  expect(image.imgdata).toEqual(Array(9).fill(0));
+});
+
 test('extractBiggestGlyph retains only the largest connected region', () => {
   const image = createImage([1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1], 5, 4).extractBiggestGlyph();
 

@@ -276,6 +276,8 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
       }
     }
 
+    if (parts.length === 0) return api;
+
     if (parts.length === 1) {
       remark(parts[0].mark, BLACK);
       return api;
