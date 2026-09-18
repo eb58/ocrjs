@@ -2,6 +2,8 @@ const fs = require('fs');
 const http = require('http');
 const path = require('path');
 const { URL } = require('url');
+const { PNG } = require('pngjs');
+const img = require('./img');
 const ocrengine = require('./ocr')();
 
 const projectPath = path.resolve(__dirname, '..');
@@ -24,7 +26,7 @@ const json = (response, status, body) => {
   response.end(JSON.stringify(body));
 };
 
-const confidence = (result) => (result[0] && result[1] && result[0].dist > 0 ? result[1].dist / result[0].dist : 99);
+const { confidence } = ocrengine;
 
 const loadDatabases = (dataset, mode) =>
   dimensions
@@ -53,6 +55,35 @@ const sendFile = (response, file) => {
 };
 
 const imageUrl = (type, dataset, digit, name) => `/image/${type}/${dataset}/${digit}/${encodeURIComponent(name)}`;
+
+const toPngBuffer = (imgdata, width, height) => {
+  const png = new PNG({ width, height });
+  imgdata.forEach((pixel, idx) => {
+    const value = pixel ? 0 : 255;
+    const offset = idx * 4;
+    png.data[offset] = value;
+    png.data[offset + 1] = value;
+    png.data[offset + 2] = value;
+    png.data[offset + 3] = 255;
+  });
+  return PNG.sync.write(png);
+};
+
+const normalizePng = (buffer) => {
+  const source = PNG.sync.read(buffer);
+  const normalized = img().frompng(source).adjustBW();
+  return toPngBuffer(normalized.imgdata, source.width, source.height);
+};
+
+const sendNormalizedImage = (response, file) => {
+  if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+    response.writeHead(404);
+    response.end('Not found');
+    return;
+  }
+  response.writeHead(200, { 'Cache-Control': 'no-cache', 'Content-Type': 'image/png' });
+  response.end(normalizePng(fs.readFileSync(file)));
+};
 
 const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4) => {
   const recognize = ocrengine.createRecognizer(file);
@@ -112,10 +143,15 @@ const serveImage = (response, pathname) => {
     path.join(dataPath, 'imgs', dataset, group, `img${digit}`),
     path.basename(decodeURIComponent(encodedName))
   );
-  sendFile(response, file);
+  sendNormalizedImage(response, file);
 };
 
 const handleRequest = (request, response) => {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    response.writeHead(405, { Allow: 'GET, HEAD' });
+    response.end('Method not allowed');
+    return;
+  }
   const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
   if (url.pathname === '/api/run') {
     try {
@@ -148,4 +184,4 @@ if (require.main === module) {
   createServer().listen(port, () => console.log(`OCR-Prüfstand: http://localhost:${port}`));
 }
 
-module.exports = { analyzeImage, createServer, runAnalysis };
+module.exports = { analyzeImage, createServer, normalizePng, runAnalysis };

@@ -133,29 +133,46 @@ const filteredResults = () => {
   return filtered.sort(sorters[elements.sort.value]);
 };
 
-const showDetails = (result) => {
-  const candidates = result.candidates
-    .map(
-      (candidate, index) => `
-        <article class="candidate ${index === 0 ? 'winner' : ''}">
-          <img src="${candidate.image}" alt="Trainingsbild für Ziffer ${candidate.digit}">
-          <div><small>Kandidat ${index + 1}</small><strong>${candidate.digit}</strong><span>Distanz ${
-        candidate.distance
-      }</span></div>
-        </article>`
+const el = (tag, props, ...children) => {
+  const node = Object.assign(document.createElement(tag), props);
+  node.append(...children);
+  return node;
+};
+
+const buildCandidate = (candidate, index) => {
+  const article = el('article', { className: `candidate ${index === 0 ? 'winner' : ''}` });
+  article.append(
+    el('img', { src: candidate.image, alt: `Trainingsbild für Ziffer ${candidate.digit}` }),
+    el(
+      'div',
+      {},
+      el('small', { textContent: `Kandidat ${index + 1}` }),
+      el('strong', { textContent: candidate.digit }),
+      el('span', { textContent: `Distanz ${candidate.distance}` })
     )
-    .join('');
-  elements.detailContent.innerHTML = `
-    <div class="detail-head">
-      <div class="detail-image"><img src="${result.image}" alt="Testbild, erwartet ${result.expected}"></div>
-      <div><p class="eyebrow">${result.dimension} · KONFIDENZ ${result.confidence.toFixed(2)}</p>
-      <h2>${result.expected} <span>→</span> ${result.prediction}</h2>
-      <p class="detail-status ${result.correct ? 'ok' : 'bad'}">${
-    result.correct ? 'Richtig erkannt' : 'Falsch erkannt'
-  }</p>
-      <p class="filename">${result.filename}</p></div>
-    </div>
-    <h3>Ähnlichste Trainingsbilder</h3><div class="candidates">${candidates}</div>`;
+  );
+  return article;
+};
+
+const showDetails = (result) => {
+  const head = el(
+    'div',
+    { className: 'detail-head' },
+    el('div', { className: 'detail-image' }, el('img', { src: result.image, alt: `Testbild, erwartet ${result.expected}` })),
+    el(
+      'div',
+      {},
+      el('p', { className: 'eyebrow', textContent: `${result.dimension} · KONFIDENZ ${result.confidence.toFixed(2)}` }),
+      el('h2', {}, document.createTextNode(`${result.expected} `), el('span', { textContent: '→' }), document.createTextNode(` ${result.prediction}`)),
+      el('p', {
+        className: `detail-status ${result.correct ? 'ok' : 'bad'}`,
+        textContent: result.correct ? 'Richtig erkannt' : 'Falsch erkannt',
+      }),
+      el('p', { className: 'filename', textContent: result.filename })
+    )
+  );
+  const candidates = el('div', { className: 'candidates' }, ...result.candidates.map(buildCandidate));
+  elements.detailContent.replaceChildren(head, el('h3', { textContent: 'Ähnlichste Trainingsbilder' }), candidates);
   elements.details.showModal();
 };
 

@@ -121,6 +121,12 @@ test('despeckle removes an isolated black pixel', () => {
   expect(image.getPix(1, 1)).toBe(0);
 });
 
+test('despeckle(0) keeps pixels that have no black neighbours at all', () => {
+  const image = createImage([0, 0, 0, 0, 1, 0, 0, 0, 0], 3, 3).despeckle(0);
+
+  expect(image.getPix(1, 1)).toBe(1);
+});
+
 test('extractGlyph removes tiny regions and retains a connected glyph', () => {
   const image = createImage([1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0], 4, 4).extractGlyph();
 

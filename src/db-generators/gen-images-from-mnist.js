@@ -35,8 +35,8 @@ const ocrMnistImageGenerator = (prefix) => {
 
   const createPng2 = (imageData, width, height) => {
     const png = new PNG({ width, height, filterType: -1 });
-    for (let y = 0; y < png.width; y++) {
-      for (let x = 0; x < png.height; x++) {
+    for (let y = 0; y < png.height; y++) {
+      for (let x = 0; x < png.width; x++) {
         const n = png.width * y + x;
         const idx = n * 4;
         png.data[idx + 0] = png.data[idx + 1] = png.data[idx + 2] = imageData[n] ? 255 : 0;

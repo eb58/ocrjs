@@ -97,7 +97,7 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
     return createImage(newImgdata, nw, nh);
   };
   const cropGlyphInner = () => {
-    const rect = innerbox(BLACK);
+    const rect = innerbox();
     if (!rect) return createImage([WHITE], 1, 1);
     const [nh, nw] = [rect.rmax - rect.rmin + 1, rect.cmax - rect.cmin + 1];
 
@@ -112,8 +112,7 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
     return createImage(newImgdata, nw, nh);
   };
 
-  const despeckle = (N) => {
-    N = N || 3;
+  const despeckle = (N = 3) => {
     const despeckle2 = (COLOR) => {
       // Flecken <= N Pixel werden entfernt
       for (let r = 1; r < h - 1; r++) {
@@ -202,13 +201,15 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
   };
 
   const expandbox = (rect) => {
+    // rect.rmax/cmax from box() are inclusive; cntarea() consumes them as an
+    // exclusive upper bound, so +1 before adding the margin.
     const marginr = Math.floor(h / 15);
     const marginc = Math.floor(w / 15);
     return {
       rmin: Math.max(rect.rmin - marginr, 0),
-      rmax: Math.min(rect.rmax + marginr, h),
+      rmax: Math.min(rect.rmax + 1 + marginr, h),
       cmin: Math.max(rect.cmin - marginc, 0),
-      cmax: Math.min(rect.cmax + marginc, w),
+      cmax: Math.min(rect.cmax + 1 + marginc, w),
     };
   };
 

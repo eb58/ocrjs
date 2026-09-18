@@ -33,7 +33,7 @@ const ocr = () => {
         };
       }
       return acc;
-    }, {})
+    }, { digit: x.digit, dist: x.dist })
     ).sort((a, b) => a.dist - b.dist)
     .slice(0, limit);
 
@@ -78,6 +78,7 @@ const ocr = () => {
   const recognizeImage = (pngfile, dbs) => recImage(pngfile, dbs).sort((a, b) => confidence(b) - confidence(a))[0];
 
   return {
+    confidence,
     createRecognizer,
     findNearestDigit,
     recognizeImage,
