@@ -21,20 +21,19 @@ const ocr = () => {
   }
 
   const findNearestDigit = (imgvec, db, limit = 3) => DIGITS
-    .map(digit => ({ digit, dist: Number.MAX_SAFE_INTEGER }))
-    .map(x => db[x.digit].reduce((acc, dbi) => {
-      const dist = distFct(imgvec, dbi.imgvec, x.dist);
-      if (dist < x.dist) {
-        x.dist = dist;
-        acc = {
-          digit: x.digit,
-          dist,
-          ...dbi,
-        };
-      }
-      return acc;
-    }, { digit: x.digit, dist: x.dist })
-    ).sort((a, b) => a.dist - b.dist)
+    .map(digit => {
+      const best = { digit, dist: Number.MAX_SAFE_INTEGER };
+      db[digit].forEach(dbi => {
+        const dist = distFct(imgvec, dbi.imgvec, best.dist);
+        if (dist < best.dist) {
+          best.dist = dist;
+          best.imgvec = dbi.imgvec;
+          best.name = dbi.name;
+        }
+      });
+      return best;
+    })
+    .sort((a, b) => a.dist - b.dist)
     .slice(0, limit);
 
   const confidence = res => res[0] && res[1] ? (res[0].dist ? res[1].dist / res[0].dist : 99) : 0;
