@@ -55,9 +55,10 @@ const sendFile = (response, file) => {
 const imageUrl = (type, dataset, digit, name) => `/image/${type}/${dataset}/${digit}/${encodeURIComponent(name)}`;
 
 const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4) => {
+  const recognize = ocrengine.createRecognizer(file);
   const best = databases.reduce((selected, { dimension, data }) => {
     if (selected && selected.confidence >= secureThreshold) return selected;
-    const candidates = ocrengine.recognizeImage(file, [data]);
+    const candidates = recognize(data);
     return { candidates, confidence: confidence(candidates), dimension, trainingPath: data.dir };
   }, undefined);
   const prediction = best.candidates[0].digit;

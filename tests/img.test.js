@@ -1,5 +1,13 @@
 const createImage = require('../src/img');
 
+test('clone keeps dimensions and isolates mutating operations', () => {
+  const original = createImage([0, 1, 1, 0, 0, 1], 3, 2);
+  const clone = original.clone().invert();
+  expect(original.imgdata).toEqual([0, 1, 1, 0, 0, 1]);
+  expect(clone.getPix(2, 1)).toBe(0);
+  expect(clone.getPix(0, 1)).toBe(1);
+});
+
 const pixels = (image, width, height) =>
   Array.from({ length: height }, (_, row) => Array.from({ length: width }, (_, column) => image.getPix(column, row)));
 

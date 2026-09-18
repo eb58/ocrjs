@@ -207,6 +207,7 @@ const renderSummary = (durationMs) => {
 const run = async () => {
   saveSettings();
   elements.run.disabled = true;
+  elements.reset.disabled = true;
   elements.run.querySelector('span').textContent = 'OCR läuft …';
   elements.gallery.innerHTML = '<div class="loading"><span></span><p>Bilder werden ausgewertet</p></div>';
   elements.empty.hidden = true;
@@ -218,18 +219,35 @@ const run = async () => {
       offset: elements.offset.value,
       threshold: elements.threshold.value,
     });
-    const response = await fetch(`/api/run?${params}`);
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || 'Auswertung fehlgeschlagen');
-    state.results = payload.results;
+    const batchSize = 20;
+    const limit = Number(params.get('limit'));
+    const offset = Number(params.get('offset'));
+    const progress = { results: [], durationMs: 0, processedPerDigit: 0 };
+    const loading = elements.gallery.querySelector('p');
+    while (!limit || progress.processedPerDigit < limit) {
+      const count = limit ? Math.min(batchSize, limit - progress.processedPerDigit) : batchSize;
+      params.set('limit', String(count));
+      params.set('offset', String(offset + progress.processedPerDigit));
+      const response = await fetch(`/api/run?${params}`);
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || 'Auswertung fehlgeschlagen');
+      progress.results.push(...payload.results);
+      progress.durationMs += payload.durationMs;
+      progress.processedPerDigit += count;
+      loading.textContent = `${progress.results.length} Bilder ausgewertet …`;
+      if (!payload.results.length) break;
+    }
+    // Restore the server's digit-first ordering across batch boundaries.
+    state.results = progress.results.sort((a, b) => a.expected - b.expected);
     state.visible = PAGE_SIZE;
     elements.export.disabled = false;
-    renderSummary(payload.durationMs);
+    renderSummary(progress.durationMs);
     renderCards();
   } catch (error) {
     elements.gallery.innerHTML = `<div class="error-message"><strong>Auswertung nicht möglich</strong><p>${error.message}</p></div>`;
   } finally {
     elements.run.disabled = false;
+    elements.reset.disabled = false;
     elements.run.querySelector('span').textContent = 'Erneut auswerten';
   }
 };

@@ -10,10 +10,11 @@ const ocr = () => {
   // const zip = (xs, ys, f) => xs.map((x, i) => f ? f(xs[i], ys[i]) : [xs[i], ys[i]])
   // const sum = (xs) => xs.reduce((acc, x) => acc + x, 0)
   //const distFct = (v1, v2) => sum(zip(v1, v2, (x, y) => sqr(x - y)))
-  const distFct = (v1, v2) => {
+  const distFct = (v1, v2, bestDistance) => {
     let sum = 0;
     for (let i = 0; i < v1.length; i++) {
       sum += sqr(v1[i] - v2[i]);
+      if (sum >= bestDistance) return sum;
     }
     return sum;
   }
@@ -21,7 +22,7 @@ const ocr = () => {
   const findNearestDigit = (imgvec, db, limit = 3) => range(10)
     .map(digit => ({ digit, dist: Number.MAX_SAFE_INTEGER }))
     .map(x => db[x.digit].reduce((acc, dbi) => {
-      const dist = distFct(imgvec, dbi.imgvec);
+      const dist = distFct(imgvec, dbi.imgvec, x.dist);
       if (dist < x.dist) {
         x.dist = dist;
         acc = {
@@ -56,21 +57,27 @@ const ocr = () => {
       .slice(0, 3);
   };
   const png = (pngfile) => PNG.sync.read(fs.readFileSync(pngfile));
-  const recImg = (pngfile, db) => {
-    const source = png(pngfile);
-    const primary = findNearestDigit(img().frompng(source).prepare(db.dimr, db.dimc).imgdata, db, 10);
-    if (confidence(primary) >= SECURE_CONFIDENCE) return primary.slice(0, 3);
-    const cleaned = findNearestDigit(
-      img().frompng(source).prepare(db.dimr, db.dimc, { cleanGlyph: true }).imgdata,
-      db,
-      10
-    );
-    return combineResults(primary, cleaned);
+  const createRecognizer = (pngfile) => {
+    const base = img().frompng(png(pngfile)).adjustBW().despeckle();
+    const primaryGlyph = base.cropGlyph();
+    const cache = new Map();
+    return db => {
+      const primaryVector = primaryGlyph.scaleDown(db.dimr, db.dimc).imgdata;
+      const primary = findNearestDigit(primaryVector, db, 10);
+      if (confidence(primary) >= SECURE_CONFIDENCE) return primary.slice(0, 3);
+      if (!cache.has('cleaned')) cache.set('cleaned', base.clone().extractGlyph().cropGlyph());
+      const cleanedVector = cache.get('cleaned').scaleDown(db.dimr, db.dimc).imgdata;
+      const identical = primaryVector.every((value, index) => value === cleanedVector[index]);
+      const cleaned = identical ? primary : findNearestDigit(cleanedVector, db, 10);
+      // Keep the ensemble's normalized scores even when both views are identical.
+      return combineResults(primary, cleaned);
+    };
   };
-  const recImage = (pngfile, dbs) => dbs.map(db => recImg(pngfile, db));
+  const recImage = (pngfile, dbs) => dbs.length ? dbs.map(createRecognizer(pngfile)) : [];
   const recognizeImage = (pngfile, dbs) => recImage(pngfile, dbs).sort((a, b) => confidence(b) - confidence(a))[0];
 
   return {
+    createRecognizer,
     findNearestDigit,
     recognizeImage,
   };

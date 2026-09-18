@@ -1,8 +1,12 @@
 jest.mock('fs', () => ({ readFileSync: jest.fn(() => Buffer.from([])) }));
 jest.mock('pngjs', () => ({ PNG: { sync: { read: jest.fn(() => ({})) } } }));
-jest.mock('../src/img', () => () => ({
-  frompng: () => ({ prepare: () => ({ imgdata: [0] }) }),
-}));
+jest.mock('../src/img', () => () => {
+  const image = { imgdata: [0] };
+  ['frompng', 'adjustBW', 'despeckle', 'cropGlyph', 'clone', 'extractGlyph', 'scaleDown'].forEach(name => {
+    image[name] = () => image;
+  });
+  return image;
+});
 
 const ocrengine = require('../src/ocr')();
 
@@ -23,6 +27,24 @@ test('findNearestDigit returns the three closest digits ordered by distance', ()
   const db = Array.from({ length: 10 }, (_, digit) => [{ imgvec: [digit] }]);
 
   expect(ocrengine.findNearestDigit([4.2], db).map(({ digit }) => digit)).toEqual([4, 5, 3]);
+});
+
+test('distance pruning preserves every class minimum and the first equal-distance candidate', () => {
+  const db = Array.from({ length: 10 }, (_, digit) => [
+    { name: 'first', imgvec: [digit, 2] },
+    { name: 'worse', imgvec: [digit + 20, 0] },
+    { name: 'tie', imgvec: [digit, -2] },
+  ]);
+  expect(ocrengine.findNearestDigit([0, 0], db, 10)).toEqual(
+    db.map((samples, digit) => ({ digit, dist: digit * digit + 4, ...samples[0] }))
+  );
+});
+
+test('multiple models decode the PNG once', () => {
+  const read = require('pngjs').PNG.sync.read;
+  read.mockClear();
+  ocrengine.recognizeImage('unused.png', [database(1, 4, 8), database(3, 4, 6)]);
+  expect(read).toHaveBeenCalledTimes(1);
 });
 
 test('recognizeImage selects the result with the highest confidence', () => {

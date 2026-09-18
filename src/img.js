@@ -312,6 +312,7 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
   };
 
   const api = {
+    clone: () => createImage(imgdata.slice(), w, h),
     frompng,
     despeckle,
     isInverted,
