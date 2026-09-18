@@ -10,6 +10,7 @@ const dataPath = path.join(projectPath, 'data');
 const port = Number(process.env.PORT || 4173);
 const datasets = new Set(['eb', 'mnist']);
 const dimensions = ['6x4', '7x5', '8x6'];
+const modes = new Set(['auto', ...dimensions]);
 const mimeTypes = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
@@ -24,11 +25,13 @@ const json = (response, status, body) => {
 
 const confidence = (result) => (result[0] && result[1] && result[0].dist > 0 ? result[1].dist / result[0].dist : 99);
 
-const loadDatabases = (dataset) =>
-  dimensions.map((dimension) => ({
-    dimension,
-    data: require(path.join(dataPath, 'dbs', `${dataset}-db-train-${dimension}`)),
-  }));
+const loadDatabases = (dataset, mode) =>
+  dimensions
+    .filter((dimension) => mode === 'auto' || dimension === mode)
+    .map((dimension) => ({
+      dimension,
+      data: require(path.join(dataPath, 'dbs', `${dataset}-db-train-${dimension}`)),
+    }));
 
 const safeFile = (root, ...parts) => {
   const file = path.resolve(root, ...parts);
@@ -50,12 +53,12 @@ const sendFile = (response, file) => {
 
 const imageUrl = (type, dataset, digit, name) => `/image/${type}/${dataset}/${digit}/${encodeURIComponent(name)}`;
 
-const analyzeImage = (file, expected, dataset, databases) => {
-  const outcomes = databases.map(({ dimension, data }) => {
+const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4) => {
+  const best = databases.reduce((selected, { dimension, data }) => {
+    if (selected && selected.confidence >= secureThreshold) return selected;
     const candidates = ocrengine.recognizeImage(file, [data]);
     return { candidates, confidence: confidence(candidates), dimension, trainingPath: data.dir };
-  });
-  const best = outcomes.sort((a, b) => b.confidence - a.confidence)[0];
+  }, undefined);
   const prediction = best.candidates[0].digit;
   const candidates = best.candidates.map((candidate) => ({
     digit: candidate.digit,
@@ -76,9 +79,10 @@ const analyzeImage = (file, expected, dataset, databases) => {
   };
 };
 
-const runAnalysis = ({ dataset, limit, offset }) => {
+const runAnalysis = ({ dataset, limit, offset, mode = 'auto', secureThreshold = 2.4 }) => {
   if (!datasets.has(dataset)) throw new Error('Unbekannter Datensatz');
-  const databases = loadDatabases(dataset);
+  if (!modes.has(mode)) throw new Error('Unbekannter Erkennungsmodus');
+  const databases = loadDatabases(dataset, mode);
   const startedAt = Date.now();
   const results = Array.from({ length: 10 }, (_, digit) => {
     const directory = path.join(dataPath, 'imgs', dataset, 'test', `img${digit}`);
@@ -87,7 +91,7 @@ const runAnalysis = ({ dataset, limit, offset }) => {
       .filter((name) => name.toLowerCase().endsWith('.png'))
       .sort()
       .slice(offset, limit ? offset + limit : undefined)
-      .map((name) => analyzeImage(path.join(directory, name), digit, dataset, databases));
+      .map((name) => analyzeImage(path.join(directory, name), digit, dataset, databases, secureThreshold));
   }).flat();
 
   return {
@@ -114,10 +118,15 @@ const handleRequest = (request, response) => {
   if (url.pathname === '/api/run') {
     try {
       const dataset = url.searchParams.get('dataset') || 'eb';
+      const mode = url.searchParams.get('mode') || 'auto';
+      const requestedThreshold = Number(url.searchParams.get('threshold'));
+      const secureThreshold = Number.isFinite(requestedThreshold)
+        ? Math.min(Math.max(requestedThreshold, 1), 100)
+        : 2.4;
       const requestedLimit = Number(url.searchParams.get('limit'));
       const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 0), 5000) : 20;
       const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
-      json(response, 200, runAnalysis({ dataset, limit, offset }));
+      json(response, 200, runAnalysis({ dataset, limit, offset, mode, secureThreshold }));
     } catch (error) {
       json(response, 500, { error: error.message });
     }

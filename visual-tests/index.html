@@ -28,6 +28,15 @@
           </select>
         </label>
         <label>
+          Erkennungsmodus
+          <select id="mode">
+            <option value="auto">Kaskade · 6×4 → 7×5 → 8×6</option>
+            <option value="6x4">Nur 6×4</option>
+            <option value="7x5">Nur 7×5</option>
+            <option value="8x6">Nur 8×6</option>
+          </select>
+        </label>
+        <label>
           Bilder je Ziffer · 0 = alle
           <input id="limit" type="number" min="0" max="5000" value="20" />
         </label>
@@ -103,12 +112,22 @@
     <template id="cardTemplate">
       <button class="card" type="button">
         <div class="image-frame"><img alt="" /></div>
-        <div class="verdict">
-          <span class="expected"></span><span class="arrow">→</span><strong class="prediction"></strong>
+        <div class="card-body">
+          <div class="verdict">
+            <span class="verdict-value">
+              <small>Soll</small>
+              <strong class="expected"></strong>
+            </span>
+            <span class="arrow" aria-hidden="true">→</span>
+            <span class="verdict-value">
+              <small>Erkannt</small>
+              <strong class="prediction"></strong>
+            </span>
+          </div>
+          <div class="confidence-row"><span class="status"></span><span class="confidence"></span></div>
+          <div class="meter"><span></span></div>
+          <small class="dimension"></small>
         </div>
-        <div class="confidence-row"><span class="status"></span><span class="confidence"></span></div>
-        <div class="meter"><span></span></div>
-        <small class="dimension"></small>
       </button>
     </template>
     <script src="/app.js"></script>

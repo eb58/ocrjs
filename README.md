@@ -12,7 +12,7 @@ npm run visual-test
 
 Danach ist die Oberfläche unter [http://localhost:4173](http://localhost:4173) erreichbar.
 
-In der Oberfläche lassen sich Datensatz, Anzahl und Startpunkt der Bilder einstellen. `0` Bilder je Ziffer führt einen vollständigen Batch-Lauf aus. Ergebnisse können nach Fehlern, sicheren Fehlklassifikationen, unsicheren Treffern und Ziffern gefiltert sowie als CSV exportiert werden. Ein Klick auf ein Bild zeigt die drei ähnlichsten Trainingsbilder.
+In der Oberfläche lassen sich Datensatz, Erkennungsmodus (`6×4`, `7×5`, `8×6` oder Kaskade), Anzahl und Startpunkt der Bilder einstellen. Die Kaskade beginnt mit `6×4` und akzeptiert ein Ergebnis, sobald die eingestellte sichere Konfidenz erreicht ist. Andernfalls folgen `7×5` und zuletzt `8×6`. `0` Bilder je Ziffer führt einen vollständigen Batch-Lauf aus. Ergebnisse können nach Fehlern, sicheren Fehlklassifikationen, unsicheren Treffern und Ziffern gefiltert sowie als CSV exportiert werden. Ein Klick auf ein Bild zeigt die drei ähnlichsten Trainingsbilder.
 
 ## Automatische Tests
 

@@ -1,8 +1,10 @@
 const PAGE_SIZE = 200;
+const SETTINGS_KEY = 'ocrjs.visual-test.settings.v1';
 const state = { results: [], status: 'all', visible: PAGE_SIZE };
 const $ = (selector) => document.querySelector(selector);
 const elements = {
   accuracy: $('#accuracy'),
+  dataset: $('#dataset'),
   details: $('#details'),
   detailContent: $('#detailContent'),
   digit: $('#digitFilter'),
@@ -12,17 +14,77 @@ const elements = {
   export: $('#exportButton'),
   falseSecure: $('#falseSecure'),
   gallery: $('#gallery'),
+  limit: $('#limit'),
+  mode: $('#mode'),
   more: $('#moreButton'),
+  offset: $('#offset'),
   resultCount: $('#resultCount'),
   run: $('#runButton'),
   sort: $('#sort'),
+  statusFilter: $('#statusFilter'),
   threshold: $('#threshold'),
   total: $('#total'),
   uncertain: $('#uncertain'),
 };
 
+const storedSettings = () => {
+  try {
+    return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
+  } catch (error) {
+    return {};
+  }
+};
+
+const restoreControl = (element, value) => {
+  if (typeof value !== 'string') return;
+  if (element.matches('select') && [...element.options].some((option) => option.value === value)) {
+    element.value = value;
+    return;
+  }
+  if (!element.matches('input')) return;
+  const fallback = element.value;
+  element.value = value;
+  if (!value || !element.checkValidity()) element.value = fallback;
+};
+
+const restoreSettings = () => {
+  const settings = storedSettings();
+  ['dataset', 'mode', 'limit', 'offset', 'threshold', 'digit', 'sort'].forEach((name) =>
+    restoreControl(elements[name], settings[name])
+  );
+  const statusButtons = [...elements.statusFilter.querySelectorAll('button')];
+  const statusButton = statusButtons.find((button) => button.dataset.status === settings.status);
+  if (!statusButton) return;
+  state.status = settings.status;
+  statusButtons.forEach((button) => button.classList.toggle('active', button === statusButton));
+};
+
+const saveSettings = () => {
+  try {
+    localStorage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({
+        dataset: elements.dataset.value,
+        digit: elements.digit.value,
+        limit: elements.limit.value,
+        mode: elements.mode.value,
+        offset: elements.offset.value,
+        sort: elements.sort.value,
+        status: state.status,
+        threshold: elements.threshold.value,
+      })
+    );
+  } catch (error) {
+    // Der Prüfstand bleibt auch bei deaktiviertem localStorage benutzbar.
+  }
+};
+
+restoreSettings();
+
 const threshold = () => Number(elements.threshold.value);
 const isUncertain = (result) => result.confidence < threshold();
+const isUncertainMatch = (result) => result.correct && isUncertain(result);
+const isSecureMatch = (result) => result.correct && !isUncertain(result);
 const percent = (value) => `${(value * 100).toFixed(1)}%`;
 
 const filteredResults = () => {
@@ -32,9 +94,9 @@ const filteredResults = () => {
     const matchesStatus =
       state.status === 'all' ||
       (state.status === 'error' && !result.correct) ||
-      (state.status === 'uncertain' && isUncertain(result)) ||
+      (state.status === 'uncertain' && isUncertainMatch(result)) ||
       (state.status === 'false-secure' && !result.correct && !isUncertain(result)) ||
-      (state.status === 'correct' && result.correct);
+      (state.status === 'correct' && isSecureMatch(result));
     return matchesDigit && matchesStatus;
   });
   const sorters = {
@@ -99,7 +161,7 @@ const renderCards = () => {
 const renderSummary = (durationMs) => {
   const correct = state.results.filter((result) => result.correct).length;
   const errors = state.results.length - correct;
-  const uncertain = state.results.filter(isUncertain).length;
+  const uncertain = state.results.filter(isUncertainMatch).length;
   const falseSecure = state.results.filter((result) => !result.correct && !isUncertain(result)).length;
   elements.total.textContent = state.results.length;
   elements.accuracy.textContent = state.results.length ? percent(correct / state.results.length) : '—';
@@ -117,15 +179,18 @@ const renderSummary = (durationMs) => {
 };
 
 const run = async () => {
+  saveSettings();
   elements.run.disabled = true;
   elements.run.querySelector('span').textContent = 'OCR läuft …';
   elements.gallery.innerHTML = '<div class="loading"><span></span><p>Bilder werden ausgewertet</p></div>';
   elements.empty.hidden = true;
   try {
     const params = new URLSearchParams({
-      dataset: $('#dataset').value,
-      limit: $('#limit').value,
-      offset: $('#offset').value,
+      dataset: elements.dataset.value,
+      limit: elements.limit.value,
+      mode: elements.mode.value,
+      offset: elements.offset.value,
+      threshold: elements.threshold.value,
     });
     const response = await fetch(`/api/run?${params}`);
     const payload = await response.json();
@@ -184,18 +249,27 @@ elements.more.addEventListener('click', () => {
   state.visible += PAGE_SIZE;
   renderCards();
 });
-elements.digit.addEventListener('change', resetAndRender);
-elements.sort.addEventListener('change', resetAndRender);
+['dataset', 'limit', 'mode', 'offset'].forEach((name) => elements[name].addEventListener('change', saveSettings));
+elements.digit.addEventListener('change', () => {
+  saveSettings();
+  resetAndRender();
+});
+elements.sort.addEventListener('change', () => {
+  saveSettings();
+  resetAndRender();
+});
 elements.threshold.addEventListener('input', () => {
+  saveSettings();
   renderSummary(0);
   resetAndRender();
 });
-$('#statusFilter').addEventListener('click', (event) => {
+elements.statusFilter.addEventListener('click', (event) => {
   const button = event.target.closest('button');
   if (!button) return;
   state.status = button.dataset.status;
   state.visible = PAGE_SIZE;
   document.querySelectorAll('#statusFilter button').forEach((item) => item.classList.toggle('active', item === button));
+  saveSettings();
   renderCards();
 });
 $('.dialog-close').addEventListener('click', () => elements.details.close());

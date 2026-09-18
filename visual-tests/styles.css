@@ -82,7 +82,7 @@ main {
 .controls {
   padding: 22px 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: 12px;
   border-bottom: 1px solid var(--line);
 }
@@ -170,13 +170,16 @@ button:focus-visible {
   flex-wrap: wrap;
 }
 .segmented {
+  max-width: 100%;
   display: flex;
+  flex-wrap: wrap;
   padding: 3px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 5px;
 }
 .segmented button {
+  flex: 0 0 auto;
   padding: 8px 13px;
   border: 0;
   border-radius: 3px;
@@ -189,6 +192,7 @@ button:focus-visible {
   color: var(--bg);
 }
 .compact {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -202,6 +206,7 @@ button:focus-visible {
   font: 0.8rem monospace;
 }
 .secondary {
+  flex: 0 0 auto;
   min-height: 36px;
   padding: 0 13px;
   border: 1px solid var(--line);
@@ -215,7 +220,7 @@ button:focus-visible {
 }
 .gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr));
   gap: 10px;
 }
 .card {
@@ -237,26 +242,53 @@ button:focus-visible {
 }
 .image-frame {
   height: 126px;
-  padding: 16px;
+  min-height: 0;
+  padding: 0;
   display: grid;
   place-items: center;
+  overflow: hidden;
   background: #fff;
 }
 .image-frame img {
-  width: 100%;
-  height: 100%;
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: calc(100% - 32px);
+  max-height: calc(100% - 32px);
   object-fit: contain;
   image-rendering: pixelated;
 }
+.card-body {
+  position: relative;
+  z-index: 1;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
 .verdict {
-  padding: 15px 14px 8px;
+  padding: 13px 14px 10px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font: 600 1.5rem monospace;
+  gap: 12px;
+}
+.verdict-value {
+  min-width: 50px;
+  display: grid;
+  gap: 2px;
+}
+.verdict-value small {
+  color: var(--muted);
+  font: 700 0.58rem/1.2 sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.verdict-value strong {
+  color: var(--text);
+  font: 700 1.45rem/1 monospace;
 }
 .verdict .arrow {
-  color: var(--muted);
+  margin-top: 12px;
+  color: #c3cbd6;
+  font: 600 1rem/1 monospace;
 }
 .is-error .prediction {
   color: var(--danger);
@@ -474,7 +506,7 @@ dialog::backdrop {
   font: 700 1.7rem monospace;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1200px) {
   .summary {
     grid-template-columns: repeat(5, 1fr);
   }
@@ -483,6 +515,15 @@ dialog::backdrop {
     border: 0;
     border-top: 1px solid var(--line);
     padding-left: 0;
+  }
+}
+@media (max-width: 900px) {
+  .summary {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .summary article:nth-child(4) {
+    padding-left: 0;
+    border-left: 0;
   }
 }
 @media (max-width: 640px) {
@@ -499,8 +540,13 @@ dialog::backdrop {
   .summary {
     grid-template-columns: 1fr 1fr;
   }
-  .summary article:nth-child(3) {
+  .summary article:nth-child(odd) {
+    padding-left: 0;
     border-left: 0;
+  }
+  .summary article:nth-child(even) {
+    padding-left: 20px;
+    border-left: 1px solid var(--line);
   }
   .distribution {
     grid-column: 1 / -1;
@@ -511,7 +557,6 @@ dialog::backdrop {
   }
   .segmented {
     width: 100%;
-    overflow-x: auto;
   }
   .compact {
     flex: 1;
