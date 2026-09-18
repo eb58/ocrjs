@@ -1,36 +1,37 @@
 {
-   "name": "ocrjs",
-   "version": "1.0.0",
-   "keywords": [
-      "ocr",
-      "handwritten digits"
-   ],
-   "repository": {},
-   "license": "MIT",
-   "description": "ocr for handwritten digits",
-   "scripts": {
-      "gen-dbs": "node src/db-generators/gen-dbs",
-      "gen-images-from-mnist": "node src/db-generators/gen-images-from-mnist",
-      "prepare": "git config core.hooksPath .githooks",
-      "lint": "eslint src tests",
-      "format": "prettier --write src tests",
-      "format:check": "prettier --check src tests",
-      "test": "jest",
-      "testWatch": "jest --watch"
-   },
-   "author": "eb",
-   "contributors": [
-      "eb"
-   ],
-   "dependencies": {
-      "mkdirp": "^3.0.1",
-      "pngjs": "^7.0.0"
-   },
-   "devDependencies": {
-      "eslint": "^7.32.0",
-      "eslint-config-prettier": "6.11.0",
-      "jest": "^30.5.1",
-      "prettier": "^2.8.8",
-      "watch": "^0.13.0"
-   }
+  "name": "ocrjs",
+  "version": "1.0.0",
+  "keywords": [
+    "ocr",
+    "handwritten digits"
+  ],
+  "repository": {},
+  "license": "MIT",
+  "description": "ocr for handwritten digits",
+  "scripts": {
+    "gen-dbs": "node src/db-generators/gen-dbs",
+    "gen-images-from-mnist": "node src/db-generators/gen-images-from-mnist",
+    "prepare": "git config core.hooksPath .githooks",
+    "lint": "eslint src tests",
+    "format": "prettier --write src tests",
+    "format:check": "prettier --check src tests",
+    "test": "jest",
+    "testWatch": "jest --watch",
+    "visual-test": "node src/visual-test-server.js"
+  },
+  "author": "eb",
+  "contributors": [
+    "eb"
+  ],
+  "dependencies": {
+    "mkdirp": "^3.0.1",
+    "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "6.11.0",
+    "jest": "^30.5.1",
+    "prettier": "^2.8.8",
+    "watch": "^0.13.0"
+  }
 }

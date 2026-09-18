@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Lokaler visueller Prüfstand für OCR-Ergebnisse" />
+    <title>OCR Prüfstand</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">OCRJS · VISUELLE QUALITÄT</p>
+        <h1>OCR Prüfstand</h1>
+      </div>
+      <button class="primary" id="runButton" type="button">
+        <span>Auswertung starten</span><span aria-hidden="true">→</span>
+      </button>
+    </header>
+
+    <main>
+      <section class="controls" aria-label="Testeinstellungen">
+        <label>
+          Datensatz
+          <select id="dataset">
+            <option value="eb">EB Handschrift</option>
+            <option value="mnist">MNIST</option>
+          </select>
+        </label>
+        <label>
+          Bilder je Ziffer
+          <input id="limit" type="number" min="1" max="200" value="20" />
+        </label>
+        <label>
+          Start bei Bild
+          <input id="offset" type="number" min="0" value="0" />
+        </label>
+        <label>
+          Unsicher unter
+          <input id="threshold" type="number" min="1" max="10" step="0.1" value="2.4" />
+        </label>
+      </section>
+
+      <section class="summary" aria-live="polite">
+        <article><span>Geprüft</span><strong id="total">—</strong></article>
+        <article><span>Trefferquote</span><strong id="accuracy">—</strong></article>
+        <article><span>Fehler</span><strong id="errors">—</strong></article>
+        <article><span>Unsicher</span><strong id="uncertain">—</strong></article>
+        <div class="distribution" id="distribution" aria-label="Trefferquote pro Ziffer"></div>
+      </section>
+
+      <section class="toolbar" aria-label="Ergebnisse filtern">
+        <div class="segmented" id="statusFilter">
+          <button class="active" data-status="all" type="button">Alle</button>
+          <button data-status="error" type="button">Fehler</button>
+          <button data-status="uncertain" type="button">Unsicher</button>
+          <button data-status="correct" type="button">Korrekt</button>
+        </div>
+        <label class="compact">
+          Ziffer
+          <select id="digitFilter">
+            <option value="all">Alle</option>
+            <option>0</option>
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+            <option>4</option>
+            <option>5</option>
+            <option>6</option>
+            <option>7</option>
+            <option>8</option>
+            <option>9</option>
+          </select>
+        </label>
+        <label class="compact">
+          Sortierung
+          <select id="sort">
+            <option value="confidence">Schwierigste zuerst</option>
+            <option value="digit">Nach Ziffer</option>
+            <option value="errors">Fehler zuerst</option>
+          </select>
+        </label>
+        <span class="result-count" id="resultCount"></span>
+      </section>
+
+      <section class="empty" id="emptyState">
+        <div class="scan-icon" aria-hidden="true"><span>8</span></div>
+        <h2>Noch keine Auswertung</h2>
+        <p>Starte einen Testlauf, um schwierige Bilder und Verwechslungen sichtbar zu machen.</p>
+      </section>
+      <section class="gallery" id="gallery" aria-label="OCR-Ergebnisse"></section>
+    </main>
+
+    <dialog id="details">
+      <button class="dialog-close" type="button" aria-label="Detailansicht schließen">×</button>
+      <div id="detailContent"></div>
+    </dialog>
+
+    <template id="cardTemplate">
+      <button class="card" type="button">
+        <div class="image-frame"><img alt="" /></div>
+        <div class="verdict">
+          <span class="expected"></span><span class="arrow">→</span><strong class="prediction"></strong>
+        </div>
+        <div class="confidence-row"><span class="status"></span><span class="confidence"></span></div>
+        <div class="meter"><span></span></div>
+        <small class="dimension"></small>
+      </button>
+    </template>
+    <script src="/app.js"></script>
+  </body>
+</html>
