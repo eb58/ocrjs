@@ -11,6 +11,7 @@
    "scripts": {
       "gen-dbs": "node src/db-generators/gen-dbs",
       "gen-images-from-mnist": "node src/db-generators/gen-images-from-mnist",
+      "prepare": "git config core.hooksPath .githooks",
       "lint": "eslint src tests",
       "format": "prettier --write src tests",
       "format:check": "prettier --check src tests",
