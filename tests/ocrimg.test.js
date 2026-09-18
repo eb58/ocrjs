@@ -15,6 +15,7 @@ test('stores pixels in row-major order', () => {
 test('invert swaps black and white pixels', () => {
   const image = createImage([0, 1, 1, 0], 2, 2).invert();
 
+  expect(image.imgdata).toEqual([1, 0, 0, 1]);
   expect(pixels(image, 2, 2)).toEqual([
     [1, 0],
     [0, 1],
@@ -35,7 +36,18 @@ test('frompng converts RGBA pixels to black and white values', () => {
   };
   const image = createImage().frompng(png);
 
-  expect(pixels(image, 2, 1)).toEqual([[true, false]]);
+  expect(image.imgdata).toHaveLength(2);
+  expect(pixels(image, 2, 1)).toEqual([[1, 0]]);
+});
+
+test('does not leak implementation names into the global scope', () => {
+  createImage([0, 1, 0], 3, 1).cropGlyphInner();
+
+  expect(global.ebocrimg).toBeUndefined();
+  expect(global.createImageWithMargin).toBeUndefined();
+  expect(global.innerbox).toBeUndefined();
+  expect(global.foundInRow).toBeUndefined();
+  expect(global.foundInCol).toBeUndefined();
 });
 
 test('cropGlyph removes the white border around a glyph', () => {
@@ -46,6 +58,36 @@ test('cropGlyph removes the white border around a glyph', () => {
     [1, 1, 1],
     [1, 0, 1],
   ]);
+});
+
+test('cropGlyph returns a single white pixel for an empty image', () => {
+  expect(createImage(Array(12).fill(0), 4, 3).cropGlyph().imgdata).toEqual([0]);
+});
+
+test('cropGlyphInner crops a glyph around the image centre', () => {
+  const image = createImage(
+    [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+    5,
+    5
+  ).cropGlyphInner();
+
+  expect(image.imgdata).toEqual(Array(9).fill(1));
+});
+
+test('createImageWithMargin centres an extremely wide image', () => {
+  const image = createImage(Array(8).fill(1), 8, 1).createImageWithMargin();
+
+  expect(image.imgdata).toHaveLength(88);
+  expect(pixels(image, 8, 11)[5]).toEqual(Array(8).fill(1));
+  expect(image.imgdata.filter(Boolean)).toHaveLength(8);
+});
+
+test('createImageWithMargin centres an extremely tall image', () => {
+  const image = createImage(Array(8).fill(1), 1, 8).createImageWithMargin();
+
+  expect(image.imgdata).toHaveLength(48);
+  expect(Array.from({ length: 8 }, (_, row) => image.getPix(2, row))).toEqual(Array(8).fill(1));
+  expect(image.imgdata.filter(Boolean)).toHaveLength(8);
 });
 
 test('scaleUp duplicates source pixels into nearest-neighbour blocks', () => {
@@ -79,5 +121,16 @@ test('extractGlyph removes tiny regions and retains a connected glyph', () => {
     [0, 0, 1, 1],
     [0, 0, 1, 1],
     [0, 0, 0, 0],
+  ]);
+});
+
+test('extractBiggestGlyph retains only the largest connected region', () => {
+  const image = createImage([1, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1], 5, 4).extractBiggestGlyph();
+
+  expect(pixels(image, 5, 4)).toEqual([
+    [0, 0, 0, 0, 0],
+    [0, 0, 0, 1, 1],
+    [0, 0, 0, 1, 1],
+    [0, 0, 0, 1, 1],
   ]);
 });

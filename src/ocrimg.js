@@ -1,19 +1,25 @@
-module.exports = ebocrimg = (imgdata, w, h) => {
+const ebocrimg = (imgdata = [], w = 0, h = 0) => {
   const BLACK = 1;
   const WHITE = 0;
 
   const size = () => w * h;
-  const range = n => [...Array(n).keys()];
+  const range = (n) => [...Array(n).keys()];
   const inrange = (r, c) => r >= 0 && c >= 0 && r < h && c < w;
-  const coord = idx => ({ r: Math.floor(idx / w), c: idx % w });
+  const coord = (idx) => ({ r: Math.floor(idx / w), c: idx % w });
   const getPix = (c, r) => imgdata[c + r * w];
   const setPix = (c, r, val) => (imgdata[c + r * w] = val);
   const adjustBW = () => (isInverted() && invert(), api);
   const inrect = (rect, r, c) => r >= rect.rmin && r < rect.rmax && c >= rect.cmin && c < rect.cmax;
-  const remark = (v1, v2) => imgdata = imgdata.map(pix => pix === v1 ? v2 : pix);
-  const invert = () => (imgdata = imgdata.map(pix => BLACK - pix), api);
-  const frompng = png => ebocrimg(png.data.map((x, idx) => png.data[4 * idx] > 128), png.width, png.height);
-  const isInverted = () => range(Math.floor(size() / 13)).reduce((acc, _, idx) => acc + (imgdata[idx * 13] === BLACK), 0) > size() / 26;
+  const remark = (v1, v2) => imgdata.forEach((pix, idx) => pix === v1 && (imgdata[idx] = v2));
+  const invert = () => (imgdata.forEach((pix, idx) => (imgdata[idx] = BLACK - pix)), api);
+  const frompng = (png) =>
+    ebocrimg(
+      range(png.width * png.height).map((idx) => Number(png.data[4 * idx] > 128)),
+      png.width,
+      png.height
+    );
+  const isInverted = () =>
+    range(Math.floor(size() / 13)).reduce((acc, _, idx) => acc + (imgdata[idx * 13] === BLACK), 0) > size() / 26;
 
   const dump = (showValues) => {
     console.log(`(h,w)=(${h},${w})`);
@@ -54,39 +60,29 @@ module.exports = ebocrimg = (imgdata, w, h) => {
       }
     }
     const normFactor = 100 * (nh / h) * (nw / w);
-    const newImgdata = scaledImgData.map(pix => Math.floor(pix * normFactor));
+    const newImgdata = scaledImgData.map((pix) => Math.floor(pix * normFactor));
     return ebocrimg(newImgdata, nw, nh);
   };
 
-  createImageWithMargin = () => {
+  const createImageWithMargin = () => {
     const MAXRATIO = 4;
     const ratio = w / h;
-    if (ratio < MAXRATIO && ratio > 1 / MAXRATIO)
-      return api;
-    // aspect ratio too large/small
-    let nw; let nh;
-    if (ratio >= MAXRATIO) {
-      nw = w;
-      nh = h * 6 / 8;
-    } else {
-      newnr = nr;
-      newnc = nr * 6 / 8;
+    if (ratio < MAXRATIO && ratio > 1 / MAXRATIO) return api;
+
+    const [nw, nh] = ratio >= MAXRATIO ? [w, Math.ceil((w * 8) / 6)] : [Math.ceil((h * 6) / 8), h];
+    const [offsetC, offsetR] = [Math.floor((nw - w) / 2), Math.floor((nh - h) / 2)];
+    const newImgdata = Array(nw * nh).fill(WHITE);
+    for (let r = 0; r < h; r++) {
+      for (let c = 0; c < w; c++) {
+        newImgdata[offsetC + c + (offsetR + r) * nw] = getPix(c, r);
+      }
     }
-    if (ratio < MAXRATIO) {
-      for (let r = 0; r < newnr; r++)
-        for (let c = 0; c < nc; c++)
-          X.set((newnc - nc) / 2 + c, r, get(c, r));
-    }
-    else {
-      for (let c = 0; c < newnc; c++)
-        for (let r = 0; r < h; r++)
-          X.set(c, (newnr - h) / 2 + r, get(c, r));
-    }
-    return X;
-  }
+    return ebocrimg(newImgdata, nw, nh);
+  };
 
   const cropGlyph = () => {
     const rect = box(BLACK);
+    if (!rect) return ebocrimg([WHITE], 1, 1);
     const [nh, nw] = [rect.rmax - rect.rmin + 1, rect.cmax - rect.cmin + 1];
 
     const newImgdata = Array(nh * nw);
@@ -101,6 +97,7 @@ module.exports = ebocrimg = (imgdata, w, h) => {
   };
   const cropGlyphInner = () => {
     const rect = innerbox(BLACK);
+    if (!rect) return ebocrimg([WHITE], 1, 1);
     const [nh, nw] = [rect.rmax - rect.rmin + 1, rect.cmax - rect.cmin + 1];
 
     const newImgdata = Array(nh * nw);
@@ -116,7 +113,7 @@ module.exports = ebocrimg = (imgdata, w, h) => {
 
   const despeckle = (N) => {
     N = N || 3;
-    const despeckle2 = COLOR => {
+    const despeckle2 = (COLOR) => {
       // Flecken <= N Pixel werden entfernt
       for (let r = 1; r < h - 1; r++) {
         const rr = r * w;
@@ -142,13 +139,15 @@ module.exports = ebocrimg = (imgdata, w, h) => {
   };
   // ######################
 
-  const box = val => {
+  const box = (val) => {
     // Berechne umschreibendes Rechteck von Glyph
     let [rmin, rmax, cmin, cmax] = [h - 1, 0, w - 1, 0];
+    let found = false;
     for (let r = 0; r < h; r++) {
       const rr = r * w;
       for (let c = 0; c < w; c++) {
         if (imgdata[c + rr] === val) {
+          found = true;
           rmin = r < rmin ? r : rmin;
           rmax = r > rmax ? r : rmax;
           cmin = c < cmin ? c : cmin;
@@ -156,29 +155,29 @@ module.exports = ebocrimg = (imgdata, w, h) => {
         }
       }
     }
-    return { rmin, rmax, cmin, cmax };
+    return found ? { rmin, rmax, cmin, cmax } : undefined;
   };
-  innerbox = () => {
+  const innerbox = () => {
     const findInRow = (r) => {
       const rr = r * w;
-      foundInRow = false;
+      let foundInRow = false;
       for (let c = 0; c < w && !foundInRow; c++) {
         if (imgdata[c + rr] === BLACK) foundInRow = true;
       }
       return foundInRow;
-    }
+    };
     const findInCol = (c) => {
-      foundInCol = false;
-      for (let r = 0; r < h && !foundInCol; c++) {
+      let foundInCol = false;
+      for (let r = 0; r < h && !foundInCol; r++) {
         if (imgdata[r * w + c] === BLACK) foundInCol = true;
       }
       return foundInCol;
-    }
+    };
     const [hm, wm] = [Math.floor(h / 2), Math.floor(w / 2)];
     let [rmin, rmax, cmin, cmax] = [hm, hm, wm, wm];
 
     let foundInRow = true;
-    for (let r = hm; r > 0 && foundInRow; r--) {
+    for (let r = hm; r >= 0 && foundInRow; r--) {
       foundInRow = findInRow(r);
       rmin = foundInRow ? r : rmin;
     }
@@ -188,7 +187,7 @@ module.exports = ebocrimg = (imgdata, w, h) => {
       rmax = foundInRow ? r : rmax;
     }
     let foundInCol = true;
-    for (let c = wm; c > 0 && foundInCol; c--) {
+    for (let c = wm; c >= 0 && foundInCol; c--) {
       foundInCol = findInCol(c);
       cmin = foundInCol ? c : cmin;
     }
@@ -197,17 +196,17 @@ module.exports = ebocrimg = (imgdata, w, h) => {
       foundInCol = findInCol(c);
       cmax = foundInCol ? c : cmax;
     }
-    return { rmin, rmax, cmin, cmax };
-  }
+    return box(BLACK) ? { rmin, rmax, cmin, cmax } : undefined;
+  };
 
-  const expandbox = rect => {
+  const expandbox = (rect) => {
     const marginr = Math.floor(h / 15);
     const marginc = Math.floor(w / 15);
     return {
       rmin: Math.max(rect.rmin - marginr, 0),
       rmax: Math.min(rect.rmax + marginr, h),
       cmin: Math.max(rect.cmin - marginc, 0),
-      cmax: Math.min(rect.cmax + marginc, w)
+      cmax: Math.min(rect.cmax + marginc, w),
     };
   };
 
@@ -280,7 +279,7 @@ module.exports = ebocrimg = (imgdata, w, h) => {
 
     const totalcnt = parts.reduce((acc, part) => acc + part.cnt_area, 0);
 
-    parts.forEach(part => {
+    parts.forEach((part) => {
       if (part.cnt_area > totalcnt / parts.length / 2) {
         remark(part.mark, 10);
       }
@@ -288,46 +287,20 @@ module.exports = ebocrimg = (imgdata, w, h) => {
 
     const rect = expandbox(box(10));
 
-    parts.forEach(part => remark(part.mark, cntarea(rect, part.mark) > 0 ? 10 : 0));
+    parts.forEach((part) => remark(part.mark, cntarea(rect, part.mark) > 0 ? 10 : 0));
 
     remark(10, BLACK);
     return api;
   };
 
   const extractBiggestGlyph = () => {
-    const GLYPHPART_MINSIZE = 3;
     const irect = { rmin: 0, rmax: h, cmin: 0, cmax: w };
     const parts = [];
-
-    let cnt_area = 0;
-    let mark = 15;
-
-    while ((cnt_area = region8(irect, 9)) > 0) {
-      if (cnt_area <= GLYPHPART_MINSIZE) {
-        remark(9, WHITE); // So kleine Flecken werden getilgt!
-      } else {
-        remark(9, mark);
-        parts.push({ cnt_area, mark });
-        mark++;
-      }
-    }
-
-    if (parts.length === 1) {
-      remark(parts[0].mark, BLACK);
-      return api;
-    }
-
-    const totalcnt = parts.reduce((acc, part) => acc + part.cnt_area, 0);
-
-    parts.forEach(part => {
-      if (part.cnt_area > totalcnt / parts.length / 2) {
-        remark(part.mark, 10);
-      }
-    });
-
-    const rect = expandbox(box(10));
-
-    remark(10, BLACK);
+    let mark = 2;
+    let area = 0;
+    while ((area = region8(irect, mark)) > 0) parts.push({ area, mark: mark++ });
+    const biggest = parts.reduce((current, part) => (!current || part.area > current.area ? part : current), undefined);
+    parts.forEach((part) => remark(part.mark, part === biggest ? BLACK : WHITE));
     return api;
   };
 
@@ -339,7 +312,9 @@ module.exports = ebocrimg = (imgdata, w, h) => {
     adjustBW,
     cropGlyph,
     cropGlyphInner,
+    createImageWithMargin,
     extractGlyph,
+    extractBiggestGlyph,
     scaleUp,
     scaleDown,
     dump,
@@ -349,3 +324,5 @@ module.exports = ebocrimg = (imgdata, w, h) => {
 
   return api;
 };
+
+module.exports = ebocrimg;
