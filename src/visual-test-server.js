@@ -1,18 +1,17 @@
 const fs = require('fs');
 const http = require('http');
+const os = require('os');
 const path = require('path');
 const { URL } = require('url');
+const { Worker } = require('worker_threads');
 const { PNG } = require('pngjs');
 const img = require('./img');
-const ocrengine = require('./ocr')();
+const { analyzeImage, dataPath, listTasks, validate } = require('./analysis');
 
 const projectPath = path.resolve(__dirname, '..');
 const publicPath = path.join(projectPath, 'visual-tests');
-const dataPath = path.join(projectPath, 'data');
 const port = Number(process.env.PORT || 4173);
-const datasets = new Set(['eb', 'mnist']);
-const dimensions = ['6x4', '7x5', '8x6'];
-const modes = new Set(['auto', ...dimensions]);
+const workerCount = Math.max(1, Number(process.env.OCR_WORKERS) || Math.min(8, os.availableParallelism() - 1));
 const mimeTypes = {
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
@@ -25,16 +24,6 @@ const json = (response, status, body) => {
   response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
   response.end(JSON.stringify(body));
 };
-
-const { confidence } = ocrengine;
-
-const loadDatabases = (dataset, mode) =>
-  dimensions
-    .filter((dimension) => mode === 'auto' || dimension === mode)
-    .map((dimension) => ({
-      dimension,
-      data: require(path.join(dataPath, 'dbs', `${dataset}-db-train-${dimension}`)),
-    }));
 
 const safeFile = (root, ...parts) => {
   const file = path.resolve(root, ...parts);
@@ -53,8 +42,6 @@ const sendFile = (response, file) => {
   });
   fs.createReadStream(file).pipe(response);
 };
-
-const imageUrl = (type, dataset, digit, name) => `/image/${type}/${dataset}/${digit}/${encodeURIComponent(name)}`;
 
 const toPngBuffer = (imgdata, width, height) => {
   const png = new PNG({ width, height });
@@ -85,53 +72,95 @@ const sendNormalizedImage = (response, file) => {
   response.end(normalizePng(fs.readFileSync(file)));
 };
 
-const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4) => {
-  const recognize = ocrengine.createRecognizer(file);
-  const best = databases.reduce((selected, { dimension, data }) => {
-    if (selected && selected.confidence >= secureThreshold) return selected;
-    const candidates = recognize(data);
-    return { candidates, confidence: confidence(candidates), dimension, trainingPath: data.dir };
-  }, undefined);
-  const prediction = best.candidates[0].digit;
-  const candidates = best.candidates.map((candidate) => ({
-    digit: candidate.digit,
-    distance: candidate.dist,
-    image: imageUrl('train', dataset, candidate.digit, candidate.name),
-    name: candidate.name,
-  }));
+// Worker-Pool: Die Erkennung pro Bild ist unabhaengig, aber jeder Worker muss die
+// Trainingsdatenbanken selbst laden (~170ms). Der Pool bleibt daher ueber Requests
+// hinweg bestehen, statt pro Request neu zu starten.
+const workerFile = path.join(__dirname, 'analysis-worker.js');
+const poolWorkers = [];
+const chunkQueue = [];
+const pendingChunks = new Map();
+let nextChunkId = 0;
 
-  return {
-    candidates,
-    confidence: best.confidence,
-    correct: prediction === expected,
-    dimension: best.dimension,
-    expected,
-    filename: path.basename(file),
-    image: imageUrl('test', dataset, expected, path.basename(file)),
-    prediction,
-  };
+const dispatch = () => {
+  while (chunkQueue.length) {
+    const entry = poolWorkers.find((candidate) => !candidate.busy);
+    if (!entry) return;
+    const chunk = chunkQueue.shift();
+    entry.busy = true;
+    entry.worker.ref();
+    pendingChunks.set(chunk.id, { ...chunk, entry });
+    entry.worker.postMessage({
+      id: chunk.id,
+      tasks: chunk.tasks,
+      dataset: chunk.dataset,
+      mode: chunk.mode,
+      secureThreshold: chunk.secureThreshold,
+    });
+  }
 };
 
-const runAnalysis = ({ dataset, limit, offset, mode = 'auto', secureThreshold = 2.4 }) => {
-  if (!datasets.has(dataset)) throw new Error('Unbekannter Datensatz');
-  if (!modes.has(mode)) throw new Error('Unbekannter Erkennungsmodus');
-  const databases = loadDatabases(dataset, mode);
-  const startedAt = Date.now();
-  const results = Array.from({ length: 10 }, (_, digit) => {
-    const directory = path.join(dataPath, 'imgs', dataset, 'test', `img${digit}`);
-    return fs
-      .readdirSync(directory)
-      .filter((name) => name.toLowerCase().endsWith('.png'))
-      .sort()
-      .slice(offset, limit ? offset + limit : undefined)
-      .map((name) => analyzeImage(path.join(directory, name), digit, dataset, databases, secureThreshold));
-  }).flat();
+const settle = (entry, id, settleChunk) => {
+  const pending = pendingChunks.get(id);
+  if (!pending) return;
+  pendingChunks.delete(id);
+  entry.busy = false;
+  entry.worker.unref();
+  settleChunk(pending);
+  dispatch();
+};
 
-  return {
-    durationMs: Date.now() - startedAt,
-    results,
-    total: results.length,
-  };
+const ensurePool = () => {
+  if (poolWorkers.length) return;
+  for (let i = 0; i < workerCount; i++) {
+    const worker = new Worker(workerFile);
+    const entry = { worker, busy: false };
+    worker.unref();
+    worker.on('message', ({ id, results, error }) =>
+      settle(entry, id, (pending) => (error ? pending.reject(new Error(error)) : pending.resolve(results)))
+    );
+    worker.on('error', (error) => {
+      // Abgestuerzten Worker aussortieren, sonst bekaeme er weiter Chunks zugeteilt.
+      // Stirbt der letzte, legt ensurePool() beim naechsten Request einen neuen Pool an.
+      poolWorkers.splice(poolWorkers.indexOf(entry), 1);
+      [...pendingChunks].forEach(([id, pending]) => pending.entry === entry && settle(entry, id, (p) => p.reject(error)));
+    });
+    poolWorkers.push(entry);
+  }
+};
+
+const runChunk = (payload) =>
+  new Promise((resolve, reject) => {
+    chunkQueue.push({ id: nextChunkId++, ...payload, resolve, reject });
+    dispatch();
+  });
+
+// unref() allein laesst den Prozess nicht enden, solange Worker-Threads leben,
+// daher muss der Pool beim Herunterfahren explizit beendet werden.
+const stopWorkers = () => {
+  const stopped = new Error('Worker-Pool beendet');
+  chunkQueue.splice(0).forEach((chunk) => chunk.reject(stopped));
+  [...pendingChunks].forEach(([id, pending]) => (pendingChunks.delete(id), pending.reject(stopped)));
+  return Promise.all(poolWorkers.splice(0).map(({ worker }) => worker.terminate()));
+};
+
+const runAnalysis = async ({ dataset, limit, offset, mode = 'auto', secureThreshold = 2.4 }) => {
+  validate({ dataset, mode });
+  const tasks = listTasks({ dataset, limit, offset }).map((task, index) => ({ ...task, index }));
+  if (!tasks.length) return { durationMs: 0, results: [], total: 0 };
+
+  const startedAt = Date.now();
+  ensurePool();
+  const chunkSize = Math.max(4, Math.ceil(tasks.length / (poolWorkers.length * 4)));
+  const chunks = Array.from({ length: Math.ceil(tasks.length / chunkSize) }, (_, i) =>
+    tasks.slice(i * chunkSize, (i + 1) * chunkSize)
+  );
+  const answers = await Promise.all(
+    chunks.map((chunkTasks) => runChunk({ tasks: chunkTasks, dataset, mode, secureThreshold }))
+  );
+
+  const results = new Array(tasks.length);
+  answers.flat().forEach(({ index, result }) => (results[index] = result));
+  return { durationMs: Date.now() - startedAt, results, total: results.length };
 };
 
 const serveImage = (response, pathname) => {
@@ -154,20 +183,16 @@ const handleRequest = (request, response) => {
   }
   const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
   if (url.pathname === '/api/run') {
-    try {
-      const dataset = url.searchParams.get('dataset') || 'eb';
-      const mode = url.searchParams.get('mode') || 'auto';
-      const requestedThreshold = Number(url.searchParams.get('threshold'));
-      const secureThreshold = Number.isFinite(requestedThreshold)
-        ? Math.min(Math.max(requestedThreshold, 1), 100)
-        : 2.4;
-      const requestedLimit = Number(url.searchParams.get('limit'));
-      const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 0), 5000) : 20;
-      const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
-      json(response, 200, runAnalysis({ dataset, limit, offset, mode, secureThreshold }));
-    } catch (error) {
-      json(response, 500, { error: error.message });
-    }
+    const dataset = url.searchParams.get('dataset') || 'eb';
+    const mode = url.searchParams.get('mode') || 'auto';
+    const requestedThreshold = Number(url.searchParams.get('threshold'));
+    const secureThreshold = Number.isFinite(requestedThreshold) ? Math.min(Math.max(requestedThreshold, 1), 100) : 2.4;
+    const requestedLimit = Number(url.searchParams.get('limit'));
+    const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 0), 5000) : 20;
+    const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
+    runAnalysis({ dataset, limit, offset, mode, secureThreshold })
+      .then((payload) => json(response, 200, payload))
+      .catch((error) => json(response, 500, { error: error.message }));
     return;
   }
   if (url.pathname.startsWith('/image/')) {
@@ -178,10 +203,10 @@ const handleRequest = (request, response) => {
   sendFile(response, safeFile(publicPath, relativePath));
 };
 
-const createServer = () => http.createServer(handleRequest);
+const createServer = () => http.createServer(handleRequest).on('close', stopWorkers);
 
 if (require.main === module) {
   createServer().listen(port, () => console.log(`OCR-Prüfstand: http://localhost:${port}`));
 }
 
-module.exports = { analyzeImage, createServer, normalizePng, runAnalysis };
+module.exports = { analyzeImage, createServer, normalizePng, runAnalysis, stopWorkers };

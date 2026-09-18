@@ -1,6 +1,9 @@
 const http = require('http');
 const { PNG } = require('pngjs');
-const { createServer, normalizePng } = require('../src/visual-test-server');
+const { analyzeImage, listTasks, loadDatabases } = require('../src/analysis');
+const { createServer, normalizePng, runAnalysis, stopWorkers } = require('../src/visual-test-server');
+
+afterAll(() => stopWorkers());
 
 const buildPng = ({ width, height, background, foreground, foregroundPixels }) => {
   const png = new PNG({ width, height });
@@ -26,6 +29,34 @@ test('normalizePng inverts a black-background training image to a white backgrou
   const buffer = buildPng({ width: 4, height: 4, background: 0, foreground: 255, foregroundPixels: new Set([5, 6, 9, 10]) });
 
   expect(cornerPixel(normalizePng(buffer))).toBe(255);
+});
+
+describe('runAnalysis via worker pool', () => {
+  const params = { dataset: 'eb', limit: 2, offset: 0, mode: '6x4', secureThreshold: 2.4 };
+
+  test('matches a sequential run exactly, including order', async () => {
+    const databases = loadDatabases(params.dataset, params.mode);
+    const expected = listTasks(params).map(({ file, expected: digit }) =>
+      analyzeImage(file, digit, params.dataset, databases, params.secureThreshold)
+    );
+
+    const actual = await runAnalysis(params);
+
+    expect(actual.total).toBe(expected.length);
+    expect(actual.results).toEqual(expected);
+  }, 60000);
+
+  test('returns an empty batch past the end without failing', async () => {
+    await expect(runAnalysis({ ...params, offset: 999999 })).resolves.toEqual({
+      durationMs: 0,
+      results: [],
+      total: 0,
+    });
+  });
+
+  test('rejects an unknown dataset', async () => {
+    await expect(runAnalysis({ ...params, dataset: 'unbekannt' })).rejects.toThrow('Unbekannter Datensatz');
+  });
 });
 
 describe('handleRequest method guard', () => {
