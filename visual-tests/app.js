@@ -1,5 +1,14 @@
 const PAGE_SIZE = 200;
 const SETTINGS_KEY = 'ocrjs.visual-test.settings.v1';
+const DEFAULT_SETTINGS = {
+  dataset: 'eb',
+  digit: 'all',
+  limit: '20',
+  mode: 'auto',
+  offset: '0',
+  sort: 'confidence',
+  threshold: '2.4',
+};
 const state = { results: [], status: 'all', visible: PAGE_SIZE };
 const $ = (selector) => document.querySelector(selector);
 const elements = {
@@ -20,6 +29,7 @@ const elements = {
   offset: $('#offset'),
   resultCount: $('#resultCount'),
   run: $('#runButton'),
+  reset: $('#resetButton'),
   sort: $('#sort'),
   statusFilter: $('#statusFilter'),
   threshold: $('#threshold'),
@@ -77,6 +87,22 @@ const saveSettings = () => {
   } catch (error) {
     // Der Prüfstand bleibt auch bei deaktiviertem localStorage benutzbar.
   }
+};
+
+const resetSettings = () => {
+  Object.entries(DEFAULT_SETTINGS).forEach(([name, value]) => {
+    elements[name].value = value;
+  });
+  state.status = 'all';
+  state.results = [];
+  state.visible = PAGE_SIZE;
+  elements.statusFilter.querySelectorAll('button').forEach((button) => {
+    button.classList.toggle('active', button.dataset.status === state.status);
+  });
+  elements.export.disabled = true;
+  saveSettings();
+  renderSummary(0);
+  renderCards();
 };
 
 restoreSettings();
@@ -244,6 +270,7 @@ const resetAndRender = () => {
 };
 
 elements.run.addEventListener('click', run);
+elements.reset.addEventListener('click', resetSettings);
 elements.export.addEventListener('click', exportCsv);
 elements.more.addEventListener('click', () => {
   state.visible += PAGE_SIZE;
