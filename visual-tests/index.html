@@ -28,8 +28,8 @@
           </select>
         </label>
         <label>
-          Bilder je Ziffer
-          <input id="limit" type="number" min="1" max="200" value="20" />
+          Bilder je Ziffer · 0 = alle
+          <input id="limit" type="number" min="0" max="5000" value="20" />
         </label>
         <label>
           Start bei Bild
@@ -46,6 +46,7 @@
         <article><span>Trefferquote</span><strong id="accuracy">—</strong></article>
         <article><span>Fehler</span><strong id="errors">—</strong></article>
         <article><span>Unsicher</span><strong id="uncertain">—</strong></article>
+        <article><span>Sicher falsch</span><strong id="falseSecure">—</strong></article>
         <div class="distribution" id="distribution" aria-label="Trefferquote pro Ziffer"></div>
       </section>
 
@@ -54,6 +55,7 @@
           <button class="active" data-status="all" type="button">Alle</button>
           <button data-status="error" type="button">Fehler</button>
           <button data-status="uncertain" type="button">Unsicher</button>
+          <button data-status="false-secure" type="button">Sicher falsch</button>
           <button data-status="correct" type="button">Korrekt</button>
         </div>
         <label class="compact">
@@ -80,6 +82,7 @@
             <option value="errors">Fehler zuerst</option>
           </select>
         </label>
+        <button class="secondary" id="exportButton" type="button" disabled>CSV exportieren</button>
         <span class="result-count" id="resultCount"></span>
       </section>
 
@@ -89,6 +92,7 @@
         <p>Starte einen Testlauf, um schwierige Bilder und Verwechslungen sichtbar zu machen.</p>
       </section>
       <section class="gallery" id="gallery" aria-label="OCR-Ergebnisse"></section>
+      <button class="load-more" id="moreButton" type="button" hidden>Weitere Ergebnisse anzeigen</button>
     </main>
 
     <dialog id="details">

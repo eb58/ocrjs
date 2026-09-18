@@ -113,7 +113,7 @@ button:focus-visible {
 }
 .summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(110px, 0.55fr)) minmax(320px, 2fr);
+  grid-template-columns: repeat(5, minmax(105px, 0.5fr)) minmax(300px, 2fr);
   border-bottom: 1px solid var(--line);
 }
 .summary article {
@@ -200,6 +200,18 @@ button:focus-visible {
   margin-left: auto;
   color: var(--muted);
   font: 0.8rem monospace;
+}
+.secondary {
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  cursor: pointer;
+}
+.secondary:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 .gallery {
   display: grid;
@@ -296,6 +308,19 @@ button:focus-visible {
   align-content: center;
   text-align: center;
   color: var(--muted);
+}
+.load-more {
+  min-height: 44px;
+  margin: 24px auto 0;
+  padding: 0 20px;
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel);
+  cursor: pointer;
+}
+.load-more[hidden] {
+  display: none;
 }
 .empty[hidden] {
   display: none;
@@ -451,7 +476,7 @@ dialog::backdrop {
 
 @media (max-width: 900px) {
   .summary {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
   .distribution {
     grid-column: 1 / -1;

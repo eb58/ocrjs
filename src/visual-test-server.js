@@ -86,7 +86,7 @@ const runAnalysis = ({ dataset, limit, offset }) => {
       .readdirSync(directory)
       .filter((name) => name.toLowerCase().endsWith('.png'))
       .sort()
-      .slice(offset, offset + limit)
+      .slice(offset, limit ? offset + limit : undefined)
       .map((name) => analyzeImage(path.join(directory, name), digit, dataset, databases));
   }).flat();
 
@@ -114,7 +114,8 @@ const handleRequest = (request, response) => {
   if (url.pathname === '/api/run') {
     try {
       const dataset = url.searchParams.get('dataset') || 'eb';
-      const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 20, 1), 200);
+      const requestedLimit = Number(url.searchParams.get('limit'));
+      const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 0), 5000) : 20;
       const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
       json(response, 200, runAnalysis({ dataset, limit, offset }));
     } catch (error) {

@@ -1,4 +1,5 @@
-const state = { results: [], status: 'all' };
+const PAGE_SIZE = 200;
+const state = { results: [], status: 'all', visible: PAGE_SIZE };
 const $ = (selector) => document.querySelector(selector);
 const elements = {
   accuracy: $('#accuracy'),
@@ -8,7 +9,10 @@ const elements = {
   distribution: $('#distribution'),
   empty: $('#emptyState'),
   errors: $('#errors'),
+  export: $('#exportButton'),
+  falseSecure: $('#falseSecure'),
   gallery: $('#gallery'),
+  more: $('#moreButton'),
   resultCount: $('#resultCount'),
   run: $('#runButton'),
   sort: $('#sort'),
@@ -29,6 +33,7 @@ const filteredResults = () => {
       state.status === 'all' ||
       (state.status === 'error' && !result.correct) ||
       (state.status === 'uncertain' && isUncertain(result)) ||
+      (state.status === 'false-secure' && !result.correct && !isUncertain(result)) ||
       (state.status === 'correct' && result.correct);
     return matchesDigit && matchesStatus;
   });
@@ -68,8 +73,9 @@ const showDetails = (result) => {
 
 const renderCards = () => {
   const results = filteredResults();
+  const visibleResults = results.slice(0, state.visible);
   elements.gallery.replaceChildren();
-  results.forEach((result) => {
+  visibleResults.forEach((result) => {
     const card = $('#cardTemplate').content.firstElementChild.cloneNode(true);
     const uncertain = isUncertain(result);
     card.classList.add(result.correct ? 'is-correct' : 'is-error');
@@ -85,7 +91,8 @@ const renderCards = () => {
     card.addEventListener('click', () => showDetails(result));
     elements.gallery.append(card);
   });
-  elements.resultCount.textContent = `${results.length} von ${state.results.length}`;
+  elements.resultCount.textContent = `${visibleResults.length} von ${results.length} gefilterten Ergebnissen`;
+  elements.more.hidden = visibleResults.length === results.length;
   elements.empty.hidden = state.results.length > 0;
 };
 
@@ -93,10 +100,12 @@ const renderSummary = (durationMs) => {
   const correct = state.results.filter((result) => result.correct).length;
   const errors = state.results.length - correct;
   const uncertain = state.results.filter(isUncertain).length;
+  const falseSecure = state.results.filter((result) => !result.correct && !isUncertain(result)).length;
   elements.total.textContent = state.results.length;
   elements.accuracy.textContent = state.results.length ? percent(correct / state.results.length) : '—';
   elements.errors.textContent = errors;
   elements.uncertain.textContent = uncertain;
+  elements.falseSecure.textContent = falseSecure;
   elements.total.title = `Laufzeit ${(durationMs / 1000).toFixed(1)} Sekunden`;
   elements.distribution.innerHTML = Array.from({ length: 10 }, (_, digit) => {
     const results = state.results.filter((result) => result.expected === digit);
@@ -122,6 +131,8 @@ const run = async () => {
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || 'Auswertung fehlgeschlagen');
     state.results = payload.results;
+    state.visible = PAGE_SIZE;
+    elements.export.disabled = false;
     renderSummary(payload.durationMs);
     renderCards();
   } catch (error) {
@@ -132,17 +143,58 @@ const run = async () => {
   }
 };
 
+const csvCell = (value) => `"${String(value).replace(/"/g, '""')}"`;
+const exportCsv = () => {
+  const headings = [
+    'Soll',
+    'Erkannt',
+    'Korrekt',
+    'Konfidenz',
+    'Modell',
+    'Datei',
+    'Kandidat 1',
+    'Kandidat 2',
+    'Kandidat 3',
+  ];
+  const rows = state.results.map((result) => [
+    result.expected,
+    result.prediction,
+    result.correct,
+    result.confidence.toFixed(4),
+    result.dimension,
+    result.filename,
+    ...result.candidates.map((candidate) => `${candidate.digit} (${candidate.distance})`),
+  ]);
+  const csv = [headings, ...rows].map((row) => row.map(csvCell).join(';')).join('\r\n');
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8' }));
+  link.download = `ocr-auswertung-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+};
+
+const resetAndRender = () => {
+  state.visible = PAGE_SIZE;
+  renderCards();
+};
+
 elements.run.addEventListener('click', run);
-elements.digit.addEventListener('change', renderCards);
-elements.sort.addEventListener('change', renderCards);
+elements.export.addEventListener('click', exportCsv);
+elements.more.addEventListener('click', () => {
+  state.visible += PAGE_SIZE;
+  renderCards();
+});
+elements.digit.addEventListener('change', resetAndRender);
+elements.sort.addEventListener('change', resetAndRender);
 elements.threshold.addEventListener('input', () => {
   renderSummary(0);
-  renderCards();
+  resetAndRender();
 });
 $('#statusFilter').addEventListener('click', (event) => {
   const button = event.target.closest('button');
   if (!button) return;
   state.status = button.dataset.status;
+  state.visible = PAGE_SIZE;
   document.querySelectorAll('#statusFilter button').forEach((item) => item.classList.toggle('active', item === button));
   renderCards();
 });
