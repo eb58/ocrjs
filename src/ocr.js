@@ -6,20 +6,21 @@ const ocr = () => {
   const img = require('./img')
 
   const range = n => [...Array(n).keys()]
-  const sqr = x => x * x
+  const DIGITS = range(10)
   // const zip = (xs, ys, f) => xs.map((x, i) => f ? f(xs[i], ys[i]) : [xs[i], ys[i]])
   // const sum = (xs) => xs.reduce((acc, x) => acc + x, 0)
   //const distFct = (v1, v2) => sum(zip(v1, v2, (x, y) => sqr(x - y)))
   const distFct = (v1, v2, bestDistance) => {
     let sum = 0;
     for (let i = 0; i < v1.length; i++) {
-      sum += sqr(v1[i] - v2[i]);
+      const diff = v1[i] - v2[i];
+      sum += diff * diff;
       if (sum >= bestDistance) return sum;
     }
     return sum;
   }
 
-  const findNearestDigit = (imgvec, db, limit = 3) => range(10)
+  const findNearestDigit = (imgvec, db, limit = 3) => DIGITS
     .map(digit => ({ digit, dist: Number.MAX_SAFE_INTEGER }))
     .map(x => db[x.digit].reduce((acc, dbi) => {
       const dist = distFct(imgvec, dbi.imgvec, x.dist);
@@ -41,7 +42,7 @@ const ocr = () => {
   const combineResults = (primary, cleaned) => {
     const primaryByDigit = Object.fromEntries(primary.map(candidate => [candidate.digit, candidate]));
     const cleanedByDigit = Object.fromEntries(cleaned.map(candidate => [candidate.digit, candidate]));
-    return range(10)
+    return DIGITS
       .map(digit => {
         const primaryCandidate = primaryByDigit[digit];
         const cleanedCandidate = cleanedByDigit[digit];

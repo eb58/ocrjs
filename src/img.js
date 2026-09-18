@@ -5,19 +5,18 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
   const size = () => w * h;
   const range = (n) => [...Array(n).keys()];
   const inrange = (r, c) => r >= 0 && c >= 0 && r < h && c < w;
-  const coord = (idx) => ({ r: Math.floor(idx / w), c: idx % w });
   const getPix = (c, r) => imgdata[c + r * w];
   const setPix = (c, r, val) => (imgdata[c + r * w] = val);
   const adjustBW = () => (isInverted() && invert(), api);
   const inrect = (rect, r, c) => r >= rect.rmin && r < rect.rmax && c >= rect.cmin && c < rect.cmax;
   const remark = (v1, v2) => imgdata.forEach((pix, idx) => pix === v1 && (imgdata[idx] = v2));
   const invert = () => (imgdata.forEach((pix, idx) => (imgdata[idx] = BLACK - pix)), api);
-  const frompng = (png) =>
-    createImage(
-      range(png.width * png.height).map((idx) => Number(png.data[4 * idx] > 128)),
-      png.width,
-      png.height
-    );
+  const frompng = (png) => {
+    const n = png.width * png.height;
+    const data = new Array(n);
+    for (let idx = 0; idx < n; idx++) data[idx] = png.data[4 * idx] > 128 ? 1 : 0;
+    return createImage(data, png.width, png.height);
+  };
   const isInverted = () =>
     range(Math.floor(size() / 13)).reduce((acc, _, idx) => acc + (imgdata[idx * 13] === BLACK), 0) > size() / 26;
 
@@ -35,7 +34,7 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
   };
 
   const scaleUp = (nh, nw) => {
-    const scaledImgData = range(nh * nw).map(() => 0);
+    const scaledImgData = new Array(nh * nw).fill(0);
     const rh = h / nh;
     const rw = w / nw;
     for (let r = 0; r < nh; r++) {
@@ -49,7 +48,7 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
 
   const scaleDown = (nh, nw) => {
     const [rh, rw, nsz] = [nh / h, nw / w, nh * nw];
-    const scaledImgData = range(nsz).map(() => 0);
+    const scaledImgData = new Array(nsz).fill(0);
     for (let r = 0; r < h; r++) {
       let sr = Math.floor(r * rh) * nw;
       const rr = w * r;
@@ -222,33 +221,35 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
     return cnt;
   };
 
-  const mark8 = (r, c, val) => {
-    if (!inrange(r, c) || getPix(c, r) !== BLACK) {
-      return 0;
+  const mark8 = (startR, startC, val) => {
+    // Iterativ statt rekursiv: vermeidet Stack-Overflow bei großen Flecken
+    if (!inrange(startR, startC) || getPix(startC, startR) !== BLACK) return 0;
+    const stack = [[startR, startC]];
+    setPix(startC, startR, val);
+    let cnt = 0;
+    while (stack.length) {
+      const [r, c] = stack.pop();
+      cnt++;
+      for (let i = -1; i <= 1; i++) {
+        for (let j = -1; j <= 1; j++) {
+          if (i === 0 && j === 0) continue;
+          const [nr, nc] = [r + i, c + j];
+          if (inrange(nr, nc) && getPix(nc, nr) === BLACK) {
+            setPix(nc, nr, val);
+            stack.push([nr, nc]);
+          }
+        }
+      }
     }
-
-    setPix(c, r, val);
-    return (
-      1 +
-      mark8(r + 1, c + 1, val) +
-      mark8(r + 1, c + 0, val) +
-      mark8(r + 1, c - 1, val) +
-      mark8(r + 0, c + 1, val) +
-      mark8(r + 0, c - 1, val) +
-      mark8(r - 1, c + 1, val) +
-      mark8(r - 1, c + 0, val) +
-      mark8(r - 1, c - 1, val)
-    );
+    return cnt;
   };
 
   const region8 = (rect, val) => {
     // Locate a black region and mark it with val. 8-connected
-    for (let i = 0; i < size(); i++) {
-      if (imgdata[i] === BLACK) {
-        const x = coord(i);
-        if (inrect(rect, x.r, x.c)) {
-          return mark8(x.r, x.c, val);
-        }
+    for (let r = rect.rmin; r < rect.rmax; r++) {
+      const rr = r * w;
+      for (let c = rect.cmin; c < rect.cmax; c++) {
+        if (imgdata[c + rr] === BLACK) return mark8(r, c, val);
       }
     }
     return 0;
