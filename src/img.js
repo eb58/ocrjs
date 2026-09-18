@@ -7,7 +7,6 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
   const getPix = (c, r) => imgdata[c + r * w];
   const setPix = (c, r, val) => (imgdata[c + r * w] = val);
   const adjustBW = () => (isInverted() && invert(), api);
-  const inrect = (rect, r, c) => r >= rect.rmin && r < rect.rmax && c >= rect.cmin && c < rect.cmax;
   const remark = (v1, v2) => imgdata.forEach((pix, idx) => pix === v1 && (imgdata[idx] = v2));
   const invert = () => (imgdata.forEach((pix, idx) => (imgdata[idx] = BLACK - pix)), api);
   const frompng = (png) => {
