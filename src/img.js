@@ -3,7 +3,6 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
   const WHITE = 0;
 
   const size = () => w * h;
-  const range = (n) => [...Array(n).keys()];
   const inrange = (r, c) => r >= 0 && c >= 0 && r < h && c < w;
   const getPix = (c, r) => imgdata[c + r * w];
   const setPix = (c, r, val) => (imgdata[c + r * w] = val);
@@ -17,8 +16,12 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
     for (let idx = 0; idx < n; idx++) data[idx] = png.data[4 * idx] > 128 ? 1 : 0;
     return createImage(data, png.width, png.height);
   };
-  const isInverted = () =>
-    range(Math.floor(size() / 13)).reduce((acc, _, idx) => acc + (imgdata[idx * 13] === BLACK), 0) > size() / 26;
+  const isInverted = () => {
+    const n = Math.floor(size() / 13);
+    let cnt = 0;
+    for (let idx = 0; idx < n; idx++) if (imgdata[idx * 13] === BLACK) cnt++;
+    return cnt > size() / 26;
+  };
 
   const dump = (showValues) => {
     console.log(`(h,w)=(${h},${w})`);
@@ -120,8 +123,9 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
           if (imgdata[rr + c] !== COLOR) continue;
           let cnt = 0;
           for (let i = -1; i <= 1; i++) {
+            const rri = (r + i) * w + c;
             for (let j = -1; j <= 1; j++) {
-              if (imgdata[(r + i) * w + c + j] === COLOR) {
+              if (imgdata[rri + j] === COLOR) {
                 cnt++;
               }
             }
