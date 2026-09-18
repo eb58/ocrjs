@@ -31,6 +31,7 @@
     "eslint": "^7.32.0",
     "eslint-config-prettier": "6.11.0",
     "jest": "^30.5.1",
+    "playwright": "^1.63.0",
     "prettier": "^2.8.8",
     "watch": "^0.13.0"
   }

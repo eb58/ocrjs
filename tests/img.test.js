@@ -127,6 +127,26 @@ test('despeckle(0) keeps pixels that have no black neighbours at all', () => {
   expect(image.getPix(1, 1)).toBe(1);
 });
 
+test('extractGlyph keeps a satellite blob that falls within the expanded margin', () => {
+  const [h, w] = [32, 32];
+  const imgdata = Array(h * w).fill(0);
+  const setBlock = (rowStart, rowEnd, colStart, colEnd) => {
+    for (let r = rowStart; r <= rowEnd; r++) {
+      for (let c = colStart; c <= colEnd; c++) {
+        imgdata[r * w + c] = 1;
+      }
+    }
+  };
+  setBlock(5, 14, 5, 14); // big, dominant glyph part (100 px)
+  setBlock(16, 17, 8, 9); // small satellite, 2 rows below the big part's box,
+  // separated by a blank row so it stays a distinct 8-connected region;
+  // only reachable through box()'s margin, not through direct significance
+
+  const image = createImage(imgdata, w, h).extractGlyph();
+
+  expect(image.getPix(8, 16)).toBe(1);
+});
+
 test('extractGlyph removes tiny regions and retains a connected glyph', () => {
   const image = createImage([1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0], 4, 4).extractGlyph();
 
