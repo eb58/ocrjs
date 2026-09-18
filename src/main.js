@@ -1,6 +1,13 @@
 const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { pathToFileURL } = require('url');
 const range = n => [...Array(n).keys()];
 const ocrengine = require('../src/ocr')();
+
+const projectPath = path.resolve(__dirname, '..');
+const dataPath = path.join(projectPath, 'data');
+const tempPath = path.join(os.tmpdir(), 'ocrjs');
 
 const ebdb_train_6x4 = require(`../data/dbs/eb-db-train-6x4`)
 const ebdb_train_7x5 = require(`../data/dbs/eb-db-train-7x5`)
@@ -16,19 +23,19 @@ const opts1 = {
   dbs: dbs_eb,
   nImages2TestBegin: 0,
   nImages2Test: 2000,
-  path2Testimages: 'data/imgs/eb/test',
+  path2Testimages: path.join(dataPath, 'imgs', 'eb', 'test'),
 }
 const opts2 = {
   dbs: dbs_mnist,
   nImages2TestBegin: 0,
   nImages2Test: 100,
-  path2Testimages: 'data/imgs/mnist/test',
+  path2Testimages: path.join(dataPath, 'imgs', 'mnist', 'test'),
 }
 
 const opts = opts1
 
 if (1) {
-  const imgFile = "/Users/erich/OneDrive/Dokumente/JavascriptProjekte/ocrjs/data/imgs/eb/test/img0/0_0_0__aliste_TestListenH_Neu_rechserv_region1_17_23_053_0_3042020h_1.tif.png"
+  const imgFile = path.join(opts.path2Testimages, 'img0', '0_0_0__aliste_TestListenH_Neu_rechserv_region1_17_23_053_0_3042020h_1.tif.png')
   const res = ocrengine.recognizeImage(imgFile, opts.dbs)
   console.log(res)
 }
@@ -54,17 +61,17 @@ const imgtest = (opts) => {
     statistics.secure += digit === res[0].digit && res[1].dist / res[0].dist > 2.4;
     statistics.falsesecure += digit !== res[0].digit && res[1].dist / res[0].dist > 2.4;
     if (digit !== res[0].digit) {
-      const name = imgfile.split('/').reverse()[0];
+      const name = path.basename(imgfile);
       badResults.push({ digit, res, imgfile });
       // console.log(digit, (res[1].dist / res[0].dist).toFixed(2), JSON.stringify(res));
       // console.log(imgfile);
-      fs.copyFileSync(imgfile, `/temp/mnist-${name}`);
+      fs.mkdirSync(tempPath, { recursive: true });
+      fs.copyFileSync(imgfile, path.join(tempPath, `mnist-${name}`));
     }
   }
 
-  const projectPath = '/Users/erich/OneDrive/Dokumente/JavascriptProjekte/ocrjs/'
   const generateHtmlReportOfBadResults = () => {
-    const path2Traindata = projectPath + opts.dbs[0].dir
+    const path2Traindata = path.resolve(projectPath, opts.dbs[0].dir)
     statistics.procent = ((statistics.ok * 100) / statistics.cnt).toFixed(2);
     statistics.secureprocent = ((statistics.secure * 100) / statistics.cnt).toFixed(2);
     statistics.time = ((new Date() - dateStart) / 1000).toFixed(2) + ' sec';
@@ -82,12 +89,12 @@ const imgtest = (opts) => {
       const res = badResult.res;
       return acc + `
       <tr>
-        <td><img src="${projectPath}${badResult.imgfile}" style="height:50px"></td>
+        <td><img src="${pathToFileURL(badResult.imgfile)}" style="height:50px"></td>
         <td>${badResult.digit}</td>
         <td>${(res[1].dist / res[0].dist).toFixed(2)} </td>
-        <td><div>Digit:${res[0].digit} Dist:${res[0].dist}</div><img src="${path2Traindata}/img${res[0].digit}/${res[0].name}" style="height:50px"></td>
-        <td><div>Digit:${res[1].digit} Dist:${res[1].dist}</div><img src="${path2Traindata}/img${res[1].digit}/${res[1].name}" style="height:50px"></td>
-        <td><div>Digit:${res[2].digit} Dist:${res[2].dist}</div><img src="${path2Traindata}/img${res[2].digit}/${res[2].name}" style="height:50px"></td>
+        <td><div>Digit:${res[0].digit} Dist:${res[0].dist}</div><img src="${pathToFileURL(path.join(path2Traindata, `img${res[0].digit}`, res[0].name))}" style="height:50px"></td>
+        <td><div>Digit:${res[1].digit} Dist:${res[1].dist}</div><img src="${pathToFileURL(path.join(path2Traindata, `img${res[1].digit}`, res[1].name))}" style="height:50px"></td>
+        <td><div>Digit:${res[2].digit} Dist:${res[2].dist}</div><img src="${pathToFileURL(path.join(path2Traindata, `img${res[2].digit}`, res[2].name))}" style="height:50px"></td>
       </tr>`}
       , '');
 
@@ -101,7 +108,8 @@ const imgtest = (opts) => {
         ${tableHeader}
         ${tableRows}
     </table>`
-    fs.writeFileSync(opts.outFile || 'c:/temp/t.html', content);
+    fs.mkdirSync(tempPath, { recursive: true });
+    fs.writeFileSync(opts.outFile || path.join(tempPath, 'report.html'), content);
   }
 
   const processFile = (path, digit) => {
@@ -110,9 +118,9 @@ const imgtest = (opts) => {
     updateStatistics(res, digit, path)
   }
 
-  const handleDigit = (digit) => fs.readdirSync(opts.path2Testimages + '/img' + digit + '/')
+  const handleDigit = digit => fs.readdirSync(path.join(opts.path2Testimages, `img${digit}`))
     .filter((fname, idx) => idx >= (opts.nImages2TestBegin || 0) && idx < opts.nImages2Test && fname.includes('.png'))
-    .forEach((fname) => processFile(opts.path2Testimages + '/img' + digit + '/' + fname, digit));
+    .forEach(fname => processFile(path.join(opts.path2Testimages, `img${digit}`, fname), digit));
 
   range(10).forEach(digit => handleDigit(digit));
   generateHtmlReportOfBadResults();

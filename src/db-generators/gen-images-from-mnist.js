@@ -2,18 +2,21 @@ const ocrMnistImageGenerator = (prefix) => {
   const range = n => [...Array(n).keys()];
 
   const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
   const mkdirp = require('mkdirp');
   const PNG = require('pngjs').PNG;
   const ocrimg = require('../ocrimg');
 
   const DIM = 28;
   const DIMSQR = DIM * DIM;
-  const mnistpath = 'data/';
+  const mnistPath = path.resolve(__dirname, '../../data');
+  const outputPath = path.join(os.tmpdir(), 'ocrjs', prefix);
 
-  range(10).forEach(digit => mkdirp.sync('/temp/' + prefix + '/img' + digit));
+  range(10).forEach(digit => mkdirp.sync(path.join(outputPath, `img${digit}`)));
 
-  const labels = fs.readFileSync(mnistpath + prefix + '-labels.idx1-ubyte').slice(8); // cf. structure of mnist
-  const images = fs.readFileSync(mnistpath + prefix + '-images.idx3-ubyte').slice(16); // cf. structure of mnist
+  const labels = fs.readFileSync(path.join(mnistPath, `${prefix}-labels.idx1-ubyte`)).slice(8); // cf. structure of mnist
+  const images = fs.readFileSync(path.join(mnistPath, `${prefix}-images.idx3-ubyte`)).slice(16); // cf. structure of mnist
 
   const getMnistImage = i => images.slice(i * DIMSQR, (i + 1) * DIMSQR);
 
@@ -44,7 +47,7 @@ const ocrMnistImageGenerator = (prefix) => {
   };
 
   labels.forEach((label, idx) => {
-    const fname = '/temp/' + prefix + '/img' + label + '/' + label + '-' + idx + '.png';
+    const fname = path.join(outputPath, `img${label}`, `${label}-${idx}.png`);
     if (!fs.existsSync(fname)) {
       console.log(idx, fname);
       const data = getMnistImage(idx);

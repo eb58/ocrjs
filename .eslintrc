@@ -8,8 +8,8 @@
   "plugins": [
   ],
   "extends": [
-   "eslint:recommended", 
-   "plugin:prettier/recommended"
+   "eslint:recommended",
+   "prettier"
   ],
   "parserOptions": {
     "sourceType": "module",

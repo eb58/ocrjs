@@ -16,6 +16,6 @@ const run = (dim, train, test) => {
 };
 
 console.log(run('7x5', 'eb'))
-// test('ocr 6x4', expect(run('6x4', 'mnist')).toBeGreaterThan(0.965))
-// test('ocr 7x5', () => expect(run('7x5', 'eb')).toBeGreaterThan(0.97))
-// test('ocr 8x6', () => expect(run('8x6', 'eb')).toBeGreaterThan(0.97))
+test('ocr 6x4', () => expect(run('6x4', 'mnist')).toBeGreaterThan(0.964))
+test('ocr 7x5', () => expect(run('7x5', 'eb')).toBeGreaterThan(0.97))
+test('ocr 8x6', () => expect(run('8x6', 'eb')).toBeGreaterThan(0.97))
