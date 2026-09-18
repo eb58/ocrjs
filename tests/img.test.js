@@ -1,4 +1,4 @@
-const createImage = require('../src/ocrimg');
+const createImage = require('../src/img');
 
 const pixels = (image, width, height) =>
   Array.from({ length: height }, (_, row) => Array.from({ length: width }, (_, column) => image.getPix(column, row)));
@@ -43,7 +43,7 @@ test('frompng converts RGBA pixels to black and white values', () => {
 test('does not leak implementation names into the global scope', () => {
   createImage([0, 1, 0], 3, 1).cropGlyphInner();
 
-  expect(global.ebocrimg).toBeUndefined();
+  expect(global.createImage).toBeUndefined();
   expect(global.createImageWithMargin).toBeUndefined();
   expect(global.innerbox).toBeUndefined();
   expect(global.foundInRow).toBeUndefined();
@@ -133,4 +133,25 @@ test('extractBiggestGlyph retains only the largest connected region', () => {
     [0, 0, 0, 1, 1],
     [0, 0, 0, 1, 1],
   ]);
+});
+
+test('prepare can discard disconnected marks before cropping the glyph', () => {
+  const png = {
+    width: 10,
+    height: 8,
+    data: Array.from({ length: 80 }, (_, index) => {
+      const row = Math.floor(index / 10);
+      const column = index % 10;
+      const black =
+        (row >= 1 && row <= 6 && column >= 6 && column <= 9) || (row >= 2 && row <= 5 && column === 0);
+      return black ? [0, 0, 0, 255] : [255, 255, 255, 255];
+    }).flat(),
+  };
+  const complete = createImage().frompng(png).prepare(5, 7).imgdata;
+  const cleaned = createImage().frompng(png).prepare(5, 7, { cleanGlyph: true }).imgdata;
+
+  expect(complete).not.toEqual(cleaned);
+  expect(cleaned.reduce((sum, pixel) => sum + pixel, 0)).toBeGreaterThan(
+    complete.reduce((sum, pixel) => sum + pixel, 0)
+  );
 });

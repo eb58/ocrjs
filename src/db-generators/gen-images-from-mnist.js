@@ -6,7 +6,7 @@ const ocrMnistImageGenerator = (prefix) => {
   const path = require('path');
   const mkdirp = require('mkdirp');
   const PNG = require('pngjs').PNG;
-  const ocrimg = require('../ocrimg');
+  const createImage = require('../img');
 
   const DIM = 28;
   const DIMSQR = DIM * DIM;
@@ -52,7 +52,7 @@ const ocrMnistImageGenerator = (prefix) => {
       console.log(idx, fname);
       const data = getMnistImage(idx);
       const png = createPng(data);
-      const img = ocrimg().frompng(png).scaleUp(150, 150);
+      const img = createImage().frompng(png).scaleUp(150, 150);
       const png2 = createPng2(img.imgdata, 150, 150);
       fs.writeFileSync(fname, PNG.sync.write(png2));
     }

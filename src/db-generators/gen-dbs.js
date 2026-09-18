@@ -2,7 +2,7 @@ const range = n => [...Array(n).keys()];
 const fs = require('fs');
 const path = require('path');
 const PNG = require('pngjs').PNG;
-const ocrimg = require('../ocrimg');
+const img = require('../img');
 
 const projectPath = path.resolve(__dirname, '../..');
 const dataPath = path.join(projectPath, 'data');
@@ -28,24 +28,21 @@ const generateDBsForEBData = (dimr, dimc, traindata, testdata, prefix) => {
   console.log('generateDBs: ', prefix, dimstr, '...');
 
   // generate training db
-  const prepareImgTrain = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().despeckle().cropGlyph().scaleDown(dimr, dimc);
-  const computeImageTrain = (xdir, name, dimr, dimc) => prepareImgTrain(PNG.sync.read(fs.readFileSync(path.join(xdir, name))), dimr, dimc);
+  const computeImage = (xdir, name, dimr, dimc) =>
+    img().frompng(PNG.sync.read(fs.readFileSync(path.join(xdir, name)))).prepare(dimr, dimc);
   fs.writeFileSync(
     path.join(dbPath, `${prefix}-train-${dimstr}.js`),
-    'module.exports = ' + JSON.stringify(genEBDB(traindata, dimr, dimc, computeImageTrain))
+    'module.exports = ' + JSON.stringify(genEBDB(traindata, dimr, dimc, computeImage))
   );
 
-
   // generate test db
-  const prepareImgTest = (png, dimr, dimc) => ocrimg().frompng(png).adjustBW().extractGlyph().cropGlyph().scaleDown(dimr, dimc);
-  const computeImageTest = (xdir, name, dimr, dimc) => prepareImgTest(PNG.sync.read(fs.readFileSync(path.join(xdir, name))), dimr, dimc);
   fs.writeFileSync(
     path.join(dbPath, `${prefix}-test-${dimstr}.js`),
-    'module.exports = ' + JSON.stringify(genEBDB(testdata, dimr, dimc, computeImageTest))
+    'module.exports = ' + JSON.stringify(genEBDB(testdata, dimr, dimc, computeImage))
   );
 };
 
-if (1) {
+{
   const traindata = path.join(dataPath, 'imgs', 'eb', 'train');
   const testdata = path.join(dataPath, 'imgs', 'eb', 'test');
   generateDBsForEBData(6, 4, traindata, testdata, 'eb-db');
@@ -53,7 +50,7 @@ if (1) {
   generateDBsForEBData(8, 6, traindata, testdata, 'eb-db');
 }
 
-if (1) {
+{
   const traindata = path.join(dataPath, 'imgs', 'mnist', 'train');
   const testdata = path.join(dataPath, 'imgs', 'mnist', 'test');
   generateDBsForEBData(6, 4, traindata, testdata, 'mnist-db');

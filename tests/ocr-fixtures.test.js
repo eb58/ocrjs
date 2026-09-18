@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { PNG } = require('pngjs');
-const createImage = require('../src/ocrimg');
+const createImage = require('../src/img');
 
 const fixtureDir = path.join(__dirname, 'fixtures');
 const fixtureNames = fs.readdirSync(fixtureDir).filter((name) => name.endsWith('.png'));

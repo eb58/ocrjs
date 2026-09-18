@@ -1,5 +1,5 @@
 const { accuracy } = require('./ocr-test-helper');
 
-test('ocr 7x5 with EB data', () => {
-  expect(accuracy('7x5', 'eb')).toBeGreaterThan(0.97);
+test('primary 7x5 classifier with uncleaned EB vectors', () => {
+  expect(accuracy('7x5', 'eb')).toBeGreaterThan(0.95);
 });

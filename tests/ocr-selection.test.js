@@ -1,16 +1,8 @@
 jest.mock('fs', () => ({ readFileSync: jest.fn(() => Buffer.from([])) }));
 jest.mock('pngjs', () => ({ PNG: { sync: { read: jest.fn(() => ({})) } } }));
-jest.mock('../src/ocrimg', () => () => {
-  const image = {
-    imgdata: [0],
-    frompng: () => image,
-    adjustBW: () => image,
-    despeckle: () => image,
-    cropGlyph: () => image,
-    scaleDown: () => image,
-  };
-  return image;
-});
+jest.mock('../src/img', () => () => ({
+  frompng: () => ({ prepare: () => ({ imgdata: [0] }) }),
+}));
 
 const ocrengine = require('../src/ocr')();
 

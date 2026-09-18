@@ -1,4 +1,4 @@
-const ebocrimg = (imgdata = [], w = 0, h = 0) => {
+const createImage = (imgdata = [], w = 0, h = 0) => {
   const BLACK = 1;
   const WHITE = 0;
 
@@ -13,7 +13,7 @@ const ebocrimg = (imgdata = [], w = 0, h = 0) => {
   const remark = (v1, v2) => imgdata.forEach((pix, idx) => pix === v1 && (imgdata[idx] = v2));
   const invert = () => (imgdata.forEach((pix, idx) => (imgdata[idx] = BLACK - pix)), api);
   const frompng = (png) =>
-    ebocrimg(
+    createImage(
       range(png.width * png.height).map((idx) => Number(png.data[4 * idx] > 128)),
       png.width,
       png.height
@@ -44,7 +44,7 @@ const ebocrimg = (imgdata = [], w = 0, h = 0) => {
         scaledImgData[c + rr] = imgdata[Math.floor(c * rw) + w * Math.floor(r * rh)] ? 1 : 0;
       }
     }
-    return ebocrimg(scaledImgData, nw, nh);
+    return createImage(scaledImgData, nw, nh);
   };
 
   const scaleDown = (nh, nw) => {
@@ -61,7 +61,7 @@ const ebocrimg = (imgdata = [], w = 0, h = 0) => {
     }
     const normFactor = 100 * (nh / h) * (nw / w);
     const newImgdata = scaledImgData.map((pix) => Math.floor(pix * normFactor));
-    return ebocrimg(newImgdata, nw, nh);
+    return createImage(newImgdata, nw, nh);
   };
 
   const createImageWithMargin = () => {
@@ -77,12 +77,12 @@ const ebocrimg = (imgdata = [], w = 0, h = 0) => {
         newImgdata[offsetC + c + (offsetR + r) * nw] = getPix(c, r);
       }
     }
-    return ebocrimg(newImgdata, nw, nh);
+    return createImage(newImgdata, nw, nh);
   };
 
   const cropGlyph = () => {
     const rect = box(BLACK);
-    if (!rect) return ebocrimg([WHITE], 1, 1);
+    if (!rect) return createImage([WHITE], 1, 1);
     const [nh, nw] = [rect.rmax - rect.rmin + 1, rect.cmax - rect.cmin + 1];
 
     const newImgdata = Array(nh * nw);
@@ -93,11 +93,11 @@ const ebocrimg = (imgdata = [], w = 0, h = 0) => {
         newImgdata[rr1 + c] = imgdata[rr2 + rect.cmin + c];
       }
     }
-    return ebocrimg(newImgdata, nw, nh);
+    return createImage(newImgdata, nw, nh);
   };
   const cropGlyphInner = () => {
     const rect = innerbox(BLACK);
-    if (!rect) return ebocrimg([WHITE], 1, 1);
+    if (!rect) return createImage([WHITE], 1, 1);
     const [nh, nw] = [rect.rmax - rect.rmin + 1, rect.cmax - rect.cmin + 1];
 
     const newImgdata = Array(nh * nw);
@@ -108,7 +108,7 @@ const ebocrimg = (imgdata = [], w = 0, h = 0) => {
         newImgdata[rr1 + c] = imgdata[rr2 + rect.cmin + c];
       }
     }
-    return ebocrimg(newImgdata, nw, nh);
+    return createImage(newImgdata, nw, nh);
   };
 
   const despeckle = (N) => {
@@ -304,6 +304,13 @@ const ebocrimg = (imgdata = [], w = 0, h = 0) => {
     return api;
   };
 
+  const prepare = (nh, nw, { cleanGlyph = false } = {}) => {
+    adjustBW();
+    despeckle();
+    if (cleanGlyph) extractGlyph();
+    return cropGlyph().scaleDown(nh, nw);
+  };
+
   const api = {
     frompng,
     despeckle,
@@ -315,6 +322,7 @@ const ebocrimg = (imgdata = [], w = 0, h = 0) => {
     createImageWithMargin,
     extractGlyph,
     extractBiggestGlyph,
+    prepare,
     scaleUp,
     scaleDown,
     dump,
@@ -325,4 +333,4 @@ const ebocrimg = (imgdata = [], w = 0, h = 0) => {
   return api;
 };
 
-module.exports = ebocrimg;
+module.exports = createImage;
