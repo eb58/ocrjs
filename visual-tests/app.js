@@ -6,6 +6,7 @@ const DEFAULT_SETTINGS = {
   limit: '20',
   mode: 'auto',
   offset: '0',
+  searchMode: 'optimized',
   sort: 'confidence',
   threshold: '2.4',
 };
@@ -31,6 +32,7 @@ const elements = {
   resultCount: $('#resultCount'),
   run: $('#runButton'),
   reset: $('#resetButton'),
+  searchMode: $('#searchMode'),
   sort: $('#sort'),
   threshold: $('#threshold'),
   total: $('#total'),
@@ -59,7 +61,7 @@ const restoreControl = (element, value) => {
 
 const restoreSettings = () => {
   const settings = storedSettings();
-  ['dataset', 'mode', 'limit', 'offset', 'threshold', 'digit', 'sort'].forEach((name) =>
+  ['dataset', 'mode', 'searchMode', 'limit', 'offset', 'threshold', 'digit', 'sort'].forEach((name) =>
     restoreControl(elements[name], settings[name])
   );
   const statusTiles = [...document.querySelectorAll('.summary article[data-status]')];
@@ -79,6 +81,7 @@ const saveSettings = () => {
         limit: elements.limit.value,
         mode: elements.mode.value,
         offset: elements.offset.value,
+        searchMode: elements.searchMode.value,
         sort: elements.sort.value,
         status: state.status,
         threshold: elements.threshold.value,
@@ -275,6 +278,7 @@ const run = async () => {
       dataset: elements.dataset.value,
       limit: elements.limit.value,
       mode: elements.mode.value,
+      search: elements.searchMode.value,
       offset: elements.offset.value,
       threshold: elements.threshold.value,
     });
@@ -361,7 +365,7 @@ elements.more.addEventListener('click', () => {
   state.visible += PAGE_SIZE;
   renderCards();
 });
-['dataset', 'limit', 'mode', 'offset'].forEach((name) => elements[name].addEventListener('change', saveSettings));
+['dataset', 'limit', 'mode', 'offset', 'searchMode'].forEach((name) => elements[name].addEventListener('change', saveSettings));
 elements.digit.addEventListener('change', () => {
   saveSettings();
   resetAndRender();

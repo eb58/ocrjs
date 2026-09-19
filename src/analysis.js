@@ -7,6 +7,14 @@ const dataPath = path.join(path.resolve(__dirname, '..'), 'data');
 const datasets = new Set(['eb', 'mnist']);
 const dimensions = ['6x4', '7x5', '8x6'];
 const modes = new Set(['auto', ...dimensions]);
+const searchModes = new Set(['optimized', 'full']);
+
+const recognitionOptionsFor = (dataset, searchMode = 'optimized') => {
+  if (!datasets.has(dataset)) throw new Error('Unbekannter Datensatz');
+  if (!searchModes.has(searchMode)) throw new Error('Unbekannter Suchmodus');
+  if (searchMode === 'full') return {};
+  return { candidateLimit: 128, fallbackConfidence: dataset === 'eb' ? 1.5 : 1.25 };
+};
 
 const loadDatabases = (dataset, mode) =>
   dimensions
@@ -28,8 +36,8 @@ const queryImageUrl = (dimension, type, dataset, digit, name) =>
 const finestCellCount = Math.max(...dimensions.map((dim) => dim.split('x').reduce((a, b) => a * Number(b), 1)));
 const secureThresholdFor = (dimr, dimc, secureThreshold) => secureThreshold * Math.sqrt(finestCellCount / (dimr * dimc));
 
-const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4) => {
-  const recognize = ocrengine.createRecognizer(file);
+const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4, options = {}) => {
+  const recognize = ocrengine.createRecognizer(file, options);
   const attempts = [];
   let secure;
   for (const { dimension, data } of databases) {
@@ -47,6 +55,9 @@ const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4)
     candidates: vote(attempts).slice(0, 3),
     dimension: databases[databases.length - 1].dimension,
   };
+  if (options.candidateLimit && options.fallbackConfidence && confidence(best.candidates) < options.fallbackConfidence) {
+    return analyzeImage(file, expected, dataset, databases, secureThreshold);
+  }
   const prediction = best.candidates[0].digit;
   const candidates = best.candidates.map((candidate) => ({
     digit: candidate.digit,
@@ -95,5 +106,7 @@ module.exports = {
   loadDatabases,
   modes,
   queryImageUrl,
+  recognitionOptionsFor,
+  searchModes,
   validate,
 };

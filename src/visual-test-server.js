@@ -6,7 +6,7 @@ const { URL } = require('url');
 const { Worker } = require('worker_threads');
 const { PNG } = require('pngjs');
 const img = require('./img');
-const { analyzeImage, dataPath, dimensions, listTasks, validate } = require('./analysis');
+const { analyzeImage, dataPath, dimensions, listTasks, recognitionOptionsFor, validate } = require('./analysis');
 
 const projectPath = path.resolve(__dirname, '..');
 const publicPath = path.join(projectPath, 'visual-tests');
@@ -130,6 +130,7 @@ const dispatch = () => {
       tasks: chunk.tasks,
       dataset: chunk.dataset,
       mode: chunk.mode,
+      searchMode: chunk.searchMode,
       secureThreshold: chunk.secureThreshold,
     });
   }
@@ -179,8 +180,9 @@ const stopWorkers = () => {
   return Promise.all(poolWorkers.splice(0).map(({ worker }) => worker.terminate()));
 };
 
-const runAnalysis = async ({ dataset, limit, offset, mode = 'auto', secureThreshold = 2.4 }) => {
+const runAnalysis = async ({ dataset, limit, offset, mode = 'auto', searchMode = 'optimized', secureThreshold = 2.4 }) => {
   validate({ dataset, mode });
+  recognitionOptionsFor(dataset, searchMode);
   const tasks = listTasks({ dataset, limit, offset }).map((task, index) => ({ ...task, index }));
   if (!tasks.length) return { durationMs: 0, results: [], total: 0 };
 
@@ -191,7 +193,7 @@ const runAnalysis = async ({ dataset, limit, offset, mode = 'auto', secureThresh
     tasks.slice(i * chunkSize, (i + 1) * chunkSize)
   );
   const answers = await Promise.all(
-    chunks.map((chunkTasks) => runChunk({ tasks: chunkTasks, dataset, mode, secureThreshold }))
+    chunks.map((chunkTasks) => runChunk({ tasks: chunkTasks, dataset, mode, searchMode, secureThreshold }))
   );
 
   const results = new Array(tasks.length);
@@ -247,9 +249,10 @@ const handleRequest = (request, response) => {
   }
   if (url.pathname === '/api/run') {
     const mode = url.searchParams.get('mode') || 'auto';
+    const searchMode = url.searchParams.get('search') || 'optimized';
     const requestedThreshold = Number(url.searchParams.get('threshold'));
     const secureThreshold = Number.isFinite(requestedThreshold) ? Math.min(Math.max(requestedThreshold, 1), 100) : 2.4;
-    runAnalysis({ dataset, limit, offset, mode, secureThreshold })
+    runAnalysis({ dataset, limit, offset, mode, searchMode, secureThreshold })
       .then((payload) => json(response, 200, payload))
       .catch((error) => json(response, 500, { error: error.message }));
     return;

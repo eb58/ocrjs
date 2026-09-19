@@ -1,7 +1,7 @@
 const http = require('http');
 const path = require('path');
 const { PNG } = require('pngjs');
-const { analyzeImage, listTasks, loadDatabases } = require('../src/analysis');
+const { analyzeImage, listTasks, loadDatabases, recognitionOptionsFor } = require('../src/analysis');
 const { createServer, normalizePng, planAnalysis, runAnalysis, stopWorkers } = require('../src/visual-test-server');
 
 afterAll(() => stopWorkers());
@@ -38,7 +38,7 @@ describe('runAnalysis via worker pool', () => {
   test('matches a sequential run exactly, including order', async () => {
     const databases = loadDatabases(params.dataset, params.mode);
     const expected = listTasks(params).map(({ file, expected: digit }) =>
-      analyzeImage(file, digit, params.dataset, databases, params.secureThreshold)
+      analyzeImage(file, digit, params.dataset, databases, params.secureThreshold, recognitionOptionsFor(params.dataset))
     );
 
     const actual = await runAnalysis(params);
@@ -53,6 +53,19 @@ describe('runAnalysis via worker pool', () => {
       results: [],
       total: 0,
     });
+  });
+
+  test('supports the complete search as a comparison mode', async () => {
+    const fullParams = { ...params, searchMode: 'full' };
+    const databases = loadDatabases(params.dataset, params.mode);
+    const expected = listTasks(params).map(({ file, expected: digit }) =>
+      analyzeImage(file, digit, params.dataset, databases, params.secureThreshold)
+    );
+    await expect(runAnalysis(fullParams)).resolves.toMatchObject({ results: expected });
+  }, 60000);
+
+  test('rejects an unknown search mode', async () => {
+    await expect(runAnalysis({ ...params, searchMode: 'unknown' })).rejects.toThrow('Unbekannter Suchmodus');
   });
 
   test('rejects an unknown dataset', async () => {

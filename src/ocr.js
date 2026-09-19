@@ -19,11 +19,18 @@ const ocr = () => {
     return sum;
   }
 
-  const findNearestDigit = (imgvec, db, limit = 3) => DIGITS
+  const findNearestDigit = (imgvec, db, limit = 3, seeds, seedCount = 32) => DIGITS
     .map(digit => {
       const best = { digit, dist: Number.MAX_SAFE_INTEGER };
+      const selected = seeds ? (seeds[digit] = []) : undefined;
       db[digit].forEach(dbi => {
-        const dist = distFct(imgvec, dbi.imgvec, best.dist);
+        const threshold = selected ? (selected.length < seedCount ? Infinity : selected[selected.length - 1].dist) : best.dist;
+        const dist = distFct(imgvec, dbi.imgvec, threshold);
+        if (selected && dist < threshold) {
+          const position = selected.findIndex(candidate => candidate.dist > dist);
+          selected.splice(position < 0 ? selected.length : position, 0, { sample: dbi, dist });
+          if (selected.length > seedCount) selected.pop();
+        }
         if (dist < best.dist) {
           best.dist = dist;
           best.imgvec = dbi.imgvec;
@@ -167,10 +174,26 @@ const ocr = () => {
   // Distanz kein sicheres Ergebnis liefert. Liefert keines davon ein sicheres Ergebnis,
   // bekommt die aufrufende Stelle alle Versuche zurueck, um sie per Abstimmung (vote)
   // mit der bereinigten Bildsicht zu kombinieren, statt sie einfach zu verwerfen.
-  const searchSecure = (query, db) => {
+  // Experimental preselection by full squared distance, separately for each digit.
+  // Stable ties retain database order; early termination uses the worst retained distance.
+  const shortlist = (query, db, limit) => Object.fromEntries(DIGITS.map(digit => {
+    const best = [];
+    db[digit].forEach(sample => {
+      const threshold = best.length < limit ? Infinity : best[best.length - 1].dist;
+      const dist = distFct(query, sample.imgvec, threshold);
+      if (dist >= threshold) return;
+      const position = best.findIndex(candidate => candidate.dist > dist);
+      best.splice(position < 0 ? best.length : position, 0, { sample, dist });
+      if (best.length > limit) best.pop();
+    });
+    return [digit, best.map(({ sample }) => sample)];
+  }));
+
+  const searchSecure = (query, db, candidateLimit, priorityCount) => {
     const { dimr, dimc } = db;
     const attempts = [];
-    const sqr = findNearestDigit(query, db, 10);
+    const seeds = priorityCount ? {} : undefined;
+    const sqr = findNearestDigit(query, db, 10, seeds, priorityCount);
     // Rows/Cols/Quad summieren pro Zeile/Spalte/Zelle ueber alle Trainingsproben und
     // koennen deshalb kein einzelnes naechstes Trainingsbild benennen (kein .name). Hier
     // wird - egal ob eine Sicht direkt sicher ist oder erst per vote() gewinnt - das
@@ -190,13 +213,18 @@ const ocr = () => {
     const based = trySecure(searchBased(query, querySmooth, db, dimc));
     if (based) return { secure: based, attempts };
 
-    const rows = trySecure(searchRows(query, db, dimr, dimc));
+    const localDb = seeds ? Object.fromEntries(DIGITS.map(digit => {
+      const first = seeds[digit].map(({ sample }) => sample);
+      const selected = new Set(first);
+      return [digit, [...first, ...db[digit].filter(sample => !selected.has(sample))]];
+    })) : candidateLimit ? shortlist(query, db, candidateLimit) : db;
+    const rows = trySecure(searchRows(query, localDb, dimr, dimc));
     if (rows) return { secure: rows, attempts };
 
-    const cols = trySecure(searchCols(query, db, dimr, dimc));
+    const cols = trySecure(searchCols(query, localDb, dimr, dimc));
     if (cols) return { secure: cols, attempts };
 
-    const quad = trySecure(searchQuad(query, db, dimr, dimc));
+    const quad = trySecure(searchQuad(query, localDb, dimr, dimc));
     if (quad) return { secure: quad, attempts };
 
     return { secure: undefined, attempts };
@@ -225,13 +253,19 @@ const ocr = () => {
   };
 
   const png = (pngfile) => PNG.sync.read(fs.readFileSync(pngfile));
-  const createRecognizer = (pngfile) => {
+  const createRecognizer = (pngfile, { candidateLimit = 0, priorityCount = 0 } = {}) => {
+    if (!Number.isInteger(priorityCount) || priorityCount < 0 || (priorityCount && candidateLimit)) {
+      throw new RangeError('priorityCount must be non-negative and cannot be combined with candidateLimit');
+    }
+    if (!Number.isInteger(candidateLimit) || candidateLimit < 0) {
+      throw new RangeError('candidateLimit must be a non-negative integer (0 means full search)');
+    }
     const base = img().frompng(png(pngfile)).adjustBW().despeckle();
     const primaryGlyph = base.cropGlyph();
     const cache = new Map();
     return db => {
       const primaryVector = primaryGlyph.scaleDown(db.dimr, db.dimc).imgdata;
-      const primary = searchSecure(primaryVector, db);
+      const primary = searchSecure(primaryVector, db, candidateLimit, priorityCount);
       if (primary.secure) return primary.secure.slice(0, 3);
 
       if (!cache.has('cleaned')) cache.set('cleaned', base.clone().extractGlyph().cropGlyph());
@@ -242,7 +276,7 @@ const ocr = () => {
       // waere reine Verdopplung, deshalb dann nur die Primaersicht abstimmen lassen.
       if (identical) return vote(primary.attempts).slice(0, 3);
 
-      const cleaned = searchSecure(cleanedVector, db);
+      const cleaned = searchSecure(cleanedVector, db, candidateLimit, priorityCount);
       if (cleaned.secure) return cleaned.secure.slice(0, 3);
 
       return vote([...primary.attempts, ...cleaned.attempts]).slice(0, 3);

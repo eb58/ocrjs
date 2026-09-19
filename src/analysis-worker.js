@@ -1,5 +1,5 @@
 const { parentPort } = require('worker_threads');
-const { analyzeImage, loadDatabases } = require('./analysis');
+const { analyzeImage, loadDatabases, recognitionOptionsFor } = require('./analysis');
 
 const databaseCache = new Map();
 const databasesFor = (dataset, mode) => {
@@ -8,12 +8,12 @@ const databasesFor = (dataset, mode) => {
   return databaseCache.get(key);
 };
 
-parentPort.on('message', ({ id, tasks, dataset, mode, secureThreshold }) => {
+parentPort.on('message', ({ id, tasks, dataset, mode, searchMode, secureThreshold }) => {
   try {
     const databases = databasesFor(dataset, mode);
     const results = tasks.map(({ file, expected, index }) => ({
       index,
-      result: analyzeImage(file, expected, dataset, databases, secureThreshold),
+      result: analyzeImage(file, expected, dataset, databases, secureThreshold, recognitionOptionsFor(dataset, searchMode)),
     }));
     parentPort.postMessage({ id, results });
   } catch (error) {

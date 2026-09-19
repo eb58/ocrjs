@@ -1,0 +1,38 @@
+{
+  "created": "2026-09-19T13:46:40.545Z",
+  "workers": 4,
+  "results": [
+    {
+      "dataset": "eb",
+      "priorityCount": 0,
+      "total": 13990,
+      "errors": 44,
+      "seconds": 51.4,
+      "changed": []
+    },
+    {
+      "dataset": "eb",
+      "priorityCount": 32,
+      "total": 13990,
+      "errors": 44,
+      "seconds": 52.5,
+      "changed": []
+    },
+    {
+      "dataset": "mnist",
+      "priorityCount": 0,
+      "total": 9784,
+      "errors": 173,
+      "seconds": 91.9,
+      "changed": []
+    },
+    {
+      "dataset": "mnist",
+      "priorityCount": 32,
+      "total": 9784,
+      "errors": 173,
+      "seconds": 116.4,
+      "changed": []
+    }
+  ]
+}

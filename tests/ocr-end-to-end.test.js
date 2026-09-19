@@ -17,6 +17,30 @@ const fixtures = fs
 // Test unten - dieser Block hier prueft bewusst nur die isolierte 7x5-Dimension.
 const singleDimensionFixtures = fixtures.filter(([filename]) => filename !== 'digit-5-a.png');
 
+test.each(fixtures)('priority ordering preserves every candidate field for %s', filename => {
+  const file = path.join(fixtureDir, filename);
+  expect(ocrengine.createRecognizer(file, { priorityCount: 32 })(database))
+    .toEqual(ocrengine.createRecognizer(file)(database));
+});
+
+test('a shortlist covering the database preserves the full fallback result', () => {
+  const recognize = ocrengine.createRecognizer(path.join(fixtureDir, 'digit-5-a.png'));
+  const limited = ocrengine.createRecognizer(path.join(fixtureDir, 'digit-5-a.png'), {
+    candidateLimit: Math.max(...Array.from({ length: 10 }, (_, digit) => database[digit].length)),
+  });
+  expect(limited(database)).toEqual(recognize(database));
+});
+
+test('an uncertain shortlist result can fall back to the full search', () => {
+  const file = path.join(fixtureDir, 'digit-5-a.png');
+  const full = analyzeImage(file, 5, 'eb', loadDatabases('eb', 'auto'));
+  const fallback = analyzeImage(file, 5, 'eb', loadDatabases('eb', 'auto'), 2.4, {
+    candidateLimit: 1,
+    fallbackConfidence: Infinity,
+  });
+  expect(fallback).toEqual(full);
+});
+
 test.each(singleDimensionFixtures)('recognizes %s through the complete PNG pipeline', (filename, expected) => {
   const result = ocrengine.recognizeImage(path.join(fixtureDir, filename), [database]);
 
