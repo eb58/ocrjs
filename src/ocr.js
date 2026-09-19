@@ -1,5 +1,4 @@
 const ocr = () => {
-  const PRIMARY_WEIGHT = 0.25
   const SECURE_CONFIDENCE = 2.4
   const fs = require('fs')
   const PNG = require('pngjs').PNG
@@ -37,25 +36,194 @@ const ocr = () => {
     .slice(0, limit);
 
   const confidence = res => res[0] && res[1] ? (res[0].dist ? res[1].dist / res[0].dist : 99) : 0;
-  const relativeDistance = (candidate, best) => best.dist ? candidate.dist / best.dist : candidate.dist ? Number.MAX_SAFE_INTEGER : 1;
-  const combineResults = (primary, cleaned) => {
-    const primaryByDigit = Object.fromEntries(primary.map(candidate => [candidate.digit, candidate]));
-    const cleanedByDigit = Object.fromEntries(cleaned.map(candidate => [candidate.digit, candidate]));
-    return DIGITS
-      .map(digit => {
-        const primaryCandidate = primaryByDigit[digit];
-        const cleanedCandidate = cleanedByDigit[digit];
-        const primaryDistance = relativeDistance(primaryCandidate, primary[0]);
-        const cleanedDistance = relativeDistance(cleanedCandidate, cleaned[0]);
-        const source = primaryDistance <= cleanedDistance ? primaryCandidate : cleanedCandidate;
-        return {
-          ...source,
-          dist: primaryDistance ** PRIMARY_WEIGHT * cleanedDistance ** (1 - PRIMARY_WEIGHT),
-        };
-      })
-      .sort((a, b) => a.dist - b.dist)
-      .slice(0, 3);
+
+  // Zusaetzliche, verschiebungstolerante Abstandsmasse neben der einfachen
+  // Zell-fuer-Zell-Distanz (distFct): portiert aus dem alten Recm/CharDatabase-System
+  // (C++/Java), das mit denselben Rastergroessen (6x4/7x5/8x6) >99% erreichte. Werden
+  // erst bei Unsicherheit nacheinander probiert - jede kann fuer sich ein sicheres
+  // Ergebnis liefern, das die primaere Distanz allein nicht gefunden hat.
+  const smoothCell = (vec, dimc, r, c) => {
+    let sum = 0, cnt = 0;
+    for (let rr = Math.max(0, r - 1); rr <= r; rr++)
+      for (let cc = Math.max(0, c - 1); cc <= c; cc++) { sum += vec[rr * dimc + cc]; cnt++; }
+    return sum / cnt;
   };
+  const smoothVec = (vec, dimc) => vec.map((_, i) => smoothCell(vec, dimc, Math.floor(i / dimc), i % dimc));
+
+  const distBased = (v1, s1, v2, s2, bestDistance) => {
+    let sum = 0;
+    for (let i = 0; i < v1.length; i++) {
+      sum += Math.abs(v1[i] - v2[i]) * (1 + Math.abs(s1[i] - s2[i]));
+      if (sum >= bestDistance) return sum;
+    }
+    return sum;
+  };
+  const searchBased = (query, querySmooth, db, dimc) => DIGITS
+    .map(digit => {
+      const best = { digit, dist: Number.MAX_SAFE_INTEGER };
+      db[digit].forEach(dbi => {
+        if (!dbi.smooth) dbi.smooth = smoothVec(dbi.imgvec, dimc);
+        const dist = distBased(dbi.imgvec, dbi.smooth, query, querySmooth, best.dist);
+        if (dist < best.dist) { best.dist = dist; best.name = dbi.name; }
+      });
+      return best;
+    })
+    .sort((a, b) => a.dist - b.dist);
+
+  // Statt jede Zelle strikt an derselben Position zu vergleichen, wird pro Zeile/Spalte
+  // in jeder Trainingsprobe einzeln die beste Uebereinstimmung gesucht (mit Fenster) und
+  // ueber alle Zeilen/Spalten aufsummiert - toleriert kleine Verschiebungen der Handschrift.
+  const distRowBand = (v1, v2, dimc, row, a, e, bestDistance) => {
+    let sum = 0;
+    for (let r = a; r <= e; r++) {
+      const rs = r * dimc;
+      let drow = 0;
+      for (let c = 0; c < dimc; c++) { const d = v1[rs + c] - v2[rs + c]; drow += d * d; }
+      sum += r === row ? 2 * drow : drow;
+      if (sum > bestDistance) return sum;
+    }
+    return sum;
+  };
+  const searchRows = (query, db, dimr, dimc) => {
+    const window = Math.max(1, Math.floor(dimr / 6));
+    return DIGITS.map(digit => {
+      const perRow = new Array(dimr).fill(Number.MAX_SAFE_INTEGER);
+      db[digit].forEach(dbi => {
+        for (let row = 0; row < dimr; row++) {
+          const a = Math.max(0, row - window);
+          const e = Math.min(dimr - 1, row + window);
+          const dist = distRowBand(dbi.imgvec, query, dimc, row, a, e, perRow[row]);
+          if (dist < perRow[row]) perRow[row] = dist;
+        }
+      });
+      return { digit, dist: perRow.reduce((sum, d) => sum + d, 0) };
+    }).sort((a, b) => a.dist - b.dist);
+  };
+
+  const distColBand = (v1, v2, dimr, dimc, col, a, e, bestDistance) => {
+    let sum = 0;
+    for (let c = a; c <= e; c++) {
+      let dcol = 0;
+      for (let r = 0; r < dimr; r++) { const n = r * dimc + c; const d = v1[n] - v2[n]; dcol += d * d; }
+      sum += c === col ? 2 * dcol : dcol;
+      if (sum > bestDistance) return sum;
+    }
+    return sum;
+  };
+  const searchCols = (query, db, dimr, dimc) => {
+    const window = Math.max(1, Math.floor(dimc / 4));
+    return DIGITS.map(digit => {
+      const perCol = new Array(dimc).fill(Number.MAX_SAFE_INTEGER);
+      db[digit].forEach(dbi => {
+        for (let col = 0; col < dimc; col++) {
+          const a = Math.max(0, col - window);
+          const e = Math.min(dimc - 1, col);
+          const dist = distColBand(dbi.imgvec, query, dimr, dimc, col, a, e, perCol[col]);
+          if (dist < perCol[col]) perCol[col] = dist;
+        }
+      });
+      return { digit, dist: perCol.reduce((sum, d) => sum + d, 0) };
+    }).sort((a, b) => a.dist - b.dist);
+  };
+
+  // Wie Row/Col, aber zweidimensional: pro Zelle wird das beste lokale Fenster gesucht,
+  // toleriert kleine Verzerrungen in beide Richtungen gleichzeitig. Teuerste der vier
+  // Zusatzmasse (ein Fenster pro Zelle statt pro Zeile/Spalte), daher zuletzt probiert.
+  const distQuad = (v1, v2, dimr, dimc, rowWindow, colWindow, row, col, bestDistance) => {
+    const ar = Math.max(0, row - rowWindow);
+    const er = Math.min(dimr - 1, row + rowWindow);
+    const ac = Math.max(0, col - colWindow);
+    const ec = Math.min(dimc - 1, col + colWindow);
+    let sum = 0;
+    for (let r = ar; r <= er; r++) {
+      const rs = r * dimc;
+      for (let c = ac; c <= ec; c++) {
+        const d = v1[rs + c] - v2[rs + c];
+        sum += r === row && c === col ? 2 * d * d : d * d;
+        if (sum > bestDistance) return sum;
+      }
+    }
+    return sum;
+  };
+  const searchQuad = (query, db, dimr, dimc) => {
+    const rowWindow = Math.max(1, Math.floor(dimr / 6));
+    const colWindow = Math.max(1, Math.floor(dimc / 4));
+    return DIGITS.map(digit => {
+      const perCell = new Array(dimr * dimc).fill(Number.MAX_SAFE_INTEGER);
+      db[digit].forEach(dbi => {
+        for (let row = 0; row < dimr; row++) {
+          for (let col = 0; col < dimc; col++) {
+            const idx = row * dimc + col;
+            const dist = distQuad(dbi.imgvec, query, dimr, dimc, rowWindow, colWindow, row, col, perCell[idx]);
+            if (dist < perCell[idx]) perCell[idx] = dist;
+          }
+        }
+      });
+      return { digit, dist: perCell.reduce((sum, d) => sum + d, 0) };
+    }).sort((a, b) => a.dist - b.dist);
+  };
+
+  // Kaskadiert ueber die verschiebungstoleranten Abstandsmasse, sobald die einfache
+  // Distanz kein sicheres Ergebnis liefert. Liefert keines davon ein sicheres Ergebnis,
+  // bekommt die aufrufende Stelle alle Versuche zurueck, um sie per Abstimmung (vote)
+  // mit der bereinigten Bildsicht zu kombinieren, statt sie einfach zu verwerfen.
+  const searchSecure = (query, db) => {
+    const { dimr, dimc } = db;
+    const attempts = [];
+    const sqr = findNearestDigit(query, db, 10);
+    // Rows/Cols/Quad summieren pro Zeile/Spalte/Zelle ueber alle Trainingsproben und
+    // koennen deshalb kein einzelnes naechstes Trainingsbild benennen (kein .name). Hier
+    // wird - egal ob eine Sicht direkt sicher ist oder erst per vote() gewinnt - das
+    // naechste benannte Trainingsbild der einfachen Distanz nachgereicht (die immer alle
+    // 10 Ziffern benennt), damit der Pruefstand nie ein Bild ohne Namen anzeigen muss.
+    const namedByDigit = Object.fromEntries(sqr.map(candidate => [candidate.digit, candidate]));
+    const trySecure = candidates => {
+      const named = candidates.map(candidate => ({ ...namedByDigit[candidate.digit], ...candidate }));
+      attempts.push(named);
+      return confidence(named) >= SECURE_CONFIDENCE ? named : undefined;
+    };
+
+    const sqrChecked = trySecure(sqr);
+    if (sqrChecked) return { secure: sqrChecked, attempts };
+
+    const querySmooth = smoothVec(query, dimc);
+    const based = trySecure(searchBased(query, querySmooth, db, dimc));
+    if (based) return { secure: based, attempts };
+
+    const rows = trySecure(searchRows(query, db, dimr, dimc));
+    if (rows) return { secure: rows, attempts };
+
+    const cols = trySecure(searchCols(query, db, dimr, dimc));
+    if (cols) return { secure: cols, attempts };
+
+    const quad = trySecure(searchQuad(query, db, dimr, dimc));
+    if (quad) return { secure: quad, attempts };
+
+    return { secure: undefined, attempts };
+  };
+
+  // Abstimmung ueber mehrere Kandidatenlisten (eine pro Sicht/Abstandsmass): jede Liste
+  // traegt ihren TOP-1-Kandidaten mit dessen eigener Konfidenz (2.Bester/Bester) ein;
+  // Ziffern, auf die sich mehrere Masse einigen, summieren diese Konfidenz multiplikativ.
+  // Portiert aus dem Voter des alten Recm-Systems - schlaegt sowohl das einfache Verwerfen
+  // unsicherer Sichten als auch das bisherige Zwei-Sichten-Blending deutlich.
+  const vote = attempts => {
+    const val = Object.fromEntries(DIGITS.map(digit => [digit, 1]));
+    const bestCandidate = {};
+    attempts.forEach(candidates => {
+      const top = candidates[0];
+      if (!top) return;
+      val[top.digit] *= confidence(candidates) || 1;
+      if (!bestCandidate[top.digit]) bestCandidate[top.digit] = top;
+    });
+    // Digits, die bei keinem Mass Platz 1 belegen, haben keinen bestCandidate-Eintrag;
+    // attempts[0] (die einfache Distanz) nennt aber immer alle 10 Ziffern.
+    const namedByDigit = Object.fromEntries(attempts[0].map(candidate => [candidate.digit, candidate]));
+    return DIGITS
+      .map(digit => ({ ...namedByDigit[digit], ...bestCandidate[digit], digit, dist: 1 / val[digit] }))
+      .sort((a, b) => a.dist - b.dist);
+  };
+
   const png = (pngfile) => PNG.sync.read(fs.readFileSync(pngfile));
   const createRecognizer = (pngfile) => {
     const base = img().frompng(png(pngfile)).adjustBW().despeckle();
@@ -63,14 +231,13 @@ const ocr = () => {
     const cache = new Map();
     return db => {
       const primaryVector = primaryGlyph.scaleDown(db.dimr, db.dimc).imgdata;
-      const primary = findNearestDigit(primaryVector, db, 10);
-      if (confidence(primary) >= SECURE_CONFIDENCE) return primary.slice(0, 3);
+      const { secure, attempts } = searchSecure(primaryVector, db);
+      if (secure) return secure.slice(0, 3);
       if (!cache.has('cleaned')) cache.set('cleaned', base.clone().extractGlyph().cropGlyph());
       const cleanedVector = cache.get('cleaned').scaleDown(db.dimr, db.dimc).imgdata;
       const identical = primaryVector.every((value, index) => value === cleanedVector[index]);
-      const cleaned = identical ? primary : findNearestDigit(cleanedVector, db, 10);
-      // Keep the ensemble's normalized scores even when both views are identical.
-      return combineResults(primary, cleaned);
+      const cleaned = identical ? attempts[0] : findNearestDigit(cleanedVector, db, 10);
+      return vote([...attempts, cleaned]).slice(0, 3);
     };
   };
   const recImage = (pngfile, dbs) => dbs.length ? dbs.map(createRecognizer(pngfile)) : [];
