@@ -53,23 +53,26 @@
       </section>
 
       <section class="summary" aria-live="polite">
-        <article><span>Geprüft</span><strong id="total">—</strong></article>
-        <article><span>Trefferquote</span><strong id="accuracy">—</strong></article>
-        <article><span>Fehler</span><strong id="errors">—</strong></article>
-        <article><span>Unsicher</span><strong id="uncertain">—</strong></article>
-        <article><span>Sicher falsch</span><strong id="falseSecure">—</strong></article>
+        <article data-status="correct" tabindex="0" role="button">
+          <span>Trefferquote</span><strong id="accuracy">—</strong>
+        </article>
+        <article class="active" data-status="all" tabindex="0" role="button">
+          <span>Geprüft</span><strong id="total">—</strong>
+        </article>
+        <article data-status="error" tabindex="0" role="button">
+          <span>Fehler</span><strong id="errors">—</strong>
+        </article>
+        <article data-status="false-secure" tabindex="0" role="button">
+          <span>Sicher falsch</span><strong id="falseSecure">—</strong>
+        </article>
+        <article data-status="uncertain" tabindex="0" role="button">
+          <span>Unsicher</span><strong id="uncertain">—</strong>
+        </article>
         <article><span>Laufzeit</span><strong id="duration">—</strong></article>
         <div class="distribution" id="distribution" aria-label="Trefferquote pro Ziffer"></div>
       </section>
 
       <section class="toolbar" aria-label="Ergebnisse filtern">
-        <div class="segmented" id="statusFilter">
-          <button class="active" data-status="all" type="button">Alle</button>
-          <button data-status="error" type="button">Fehler</button>
-          <button data-status="uncertain" type="button">Unsicher</button>
-          <button data-status="false-secure" type="button">Sicher falsch</button>
-          <button data-status="correct" type="button">Korrekt</button>
-        </div>
         <label class="compact">
           Ziffer
           <select id="digitFilter">

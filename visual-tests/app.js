@@ -32,7 +32,6 @@ const elements = {
   run: $('#runButton'),
   reset: $('#resetButton'),
   sort: $('#sort'),
-  statusFilter: $('#statusFilter'),
   threshold: $('#threshold'),
   total: $('#total'),
   uncertain: $('#uncertain'),
@@ -63,11 +62,11 @@ const restoreSettings = () => {
   ['dataset', 'mode', 'limit', 'offset', 'threshold', 'digit', 'sort'].forEach((name) =>
     restoreControl(elements[name], settings[name])
   );
-  const statusButtons = [...elements.statusFilter.querySelectorAll('button')];
-  const statusButton = statusButtons.find((button) => button.dataset.status === settings.status);
-  if (!statusButton) return;
+  const statusTiles = [...document.querySelectorAll('.summary article[data-status]')];
+  const statusTile = statusTiles.find((tile) => tile.dataset.status === settings.status);
+  if (!statusTile) return;
   state.status = settings.status;
-  statusButtons.forEach((button) => button.classList.toggle('active', button === statusButton));
+  statusTiles.forEach((tile) => tile.classList.toggle('active', tile === statusTile));
 };
 
 const saveSettings = () => {
@@ -97,8 +96,8 @@ const resetSettings = () => {
   state.status = 'all';
   state.results = [];
   state.visible = PAGE_SIZE;
-  elements.statusFilter.querySelectorAll('button').forEach((button) => {
-    button.classList.toggle('active', button.dataset.status === state.status);
+  document.querySelectorAll('.summary article[data-status]').forEach((tile) => {
+    tile.classList.toggle('active', tile.dataset.status === state.status);
   });
   elements.export.disabled = true;
   saveSettings();
@@ -179,7 +178,13 @@ const showDetails = (result) => {
       'div',
       {},
       el('p', { className: 'eyebrow', textContent: `${result.dimension} · KONFIDENZ ${result.confidence.toFixed(2)}` }),
-      el('h2', {}, document.createTextNode(`${result.expected} `), el('span', { textContent: '→' }), document.createTextNode(` ${result.prediction}`)),
+      el(
+        'h2',
+        {},
+        document.createTextNode(`${result.expected} `),
+        el('span', { textContent: '→' }),
+        document.createTextNode(` ${result.prediction}`)
+      ),
       el('p', {
         className: `detail-status ${result.correct ? 'ok' : 'bad'}`,
         textContent: result.correct ? 'Richtig erkannt' : 'Falsch erkannt',
@@ -217,7 +222,10 @@ const renderCards = () => {
   elements.empty.hidden = state.results.length > 0;
 };
 
-const formatDuration = (ms) => (ms < 60000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')} min`);
+const formatDuration = (ms) =>
+  ms < 60000
+    ? `${(ms / 1000).toFixed(1)} s`
+    : `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')} min`;
 
 const renderSummary = () => {
   const correct = state.results.filter((result) => result.correct).length;
@@ -230,7 +238,9 @@ const renderSummary = () => {
   elements.uncertain.textContent = uncertain;
   elements.falseSecure.textContent = falseSecure;
   elements.duration.textContent = state.results.length ? formatDuration(state.durationMs) : '—';
-  elements.duration.title = state.results.length ? `${Math.round(state.results.length / (state.durationMs / 1000 || 1))} Bilder/s` : '';
+  elements.duration.title = state.results.length
+    ? `${Math.round(state.results.length / (state.durationMs / 1000 || 1))} Bilder/s`
+    : '';
   elements.distribution.innerHTML = Array.from({ length: 10 }, (_, digit) => {
     const results = state.results.filter((result) => result.expected === digit);
     const rate = results.length ? results.filter((result) => result.correct).length / results.length : 0;
@@ -255,7 +265,8 @@ const run = async () => {
   const showProgress = () => {
     const elapsed = performance.now() - startedAt;
     const done = progress.results.length;
-    const eta = done && progress.total > done ? ` · noch ca. ${formatDuration((elapsed / done) * (progress.total - done))}` : '';
+    const eta =
+      done && progress.total > done ? ` · noch ca. ${formatDuration((elapsed / done) * (progress.total - done))}` : '';
     loading.textContent = `${done} von ${progress.total} Bildern · ${formatDuration(elapsed)}${eta}`;
   };
   const timer = setInterval(showProgress, 100);
@@ -364,14 +375,27 @@ elements.threshold.addEventListener('input', () => {
   renderSummary();
   resetAndRender();
 });
-elements.statusFilter.addEventListener('click', (event) => {
-  const button = event.target.closest('button');
-  if (!button) return;
-  state.status = button.dataset.status;
+const applyStatus = (status) => {
+  state.status = status;
   state.visible = PAGE_SIZE;
-  document.querySelectorAll('#statusFilter button').forEach((item) => item.classList.toggle('active', item === button));
+  document
+    .querySelectorAll('.summary article[data-status]')
+    .forEach((tile) => tile.classList.toggle('active', tile.dataset.status === status));
   saveSettings();
   renderCards();
+};
+document.querySelectorAll('.summary article[data-status]').forEach((tile) => {
+  const select = () => {
+    applyStatus(tile.dataset.status);
+    elements.gallery.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  tile.addEventListener('click', select);
+  tile.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      select();
+    }
+  });
 });
 $('.dialog-close').addEventListener('click', () => elements.details.close());
 elements.details.addEventListener('click', (event) => {
