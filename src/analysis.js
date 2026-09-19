@@ -20,6 +20,14 @@ const imageUrl = (type, dataset, digit, name) => `/image/${type}/${dataset}/${di
 const queryImageUrl = (dimension, type, dataset, digit, name) =>
   `/image/query/${dimension}/${type}/${dataset}/${digit}/${encodeURIComponent(name)}`;
 
+// Je groeber das Raster, desto eher wirkt ein Treffer zufaellig "sicher": mit wenigen
+// Zellen gibt es weniger Moeglichkeiten, sich von einer anderen Ziffer zu unterscheiden,
+// also kann ein Distanzverhaeltnis von z.B. 2.5 dort blosser Zufall sein, wo es bei einem
+// feinen Raster echte Aehnlichkeit bedeuten wuerde. Die Schwelle wird deshalb relativ zur
+// Zellenzahl der feinsten Dimension hochskaliert, statt ueberall gleich streng zu sein.
+const finestCellCount = Math.max(...dimensions.map((dim) => dim.split('x').reduce((a, b) => a * Number(b), 1)));
+const secureThresholdFor = (dimr, dimc, secureThreshold) => secureThreshold * Math.sqrt(finestCellCount / (dimr * dimc));
+
 const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4) => {
   const recognize = ocrengine.createRecognizer(file);
   const attempts = [];
@@ -27,7 +35,7 @@ const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4)
   for (const { dimension, data } of databases) {
     const candidates = recognize(data);
     attempts.push(candidates);
-    if (confidence(candidates) >= secureThreshold) {
+    if (confidence(candidates) >= secureThresholdFor(data.dimr, data.dimc, secureThreshold)) {
       secure = { candidates, dimension };
       break;
     }

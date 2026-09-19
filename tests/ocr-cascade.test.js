@@ -15,7 +15,7 @@ const cascadeAccuracy = async (dataset) => {
 };
 
 test('cascade over the EB test set', async () => {
-  expect(await cascadeAccuracy('eb')).toBeGreaterThan(0.99);
+  expect(await cascadeAccuracy('eb')).toBeGreaterThan(0.995);
 }, 600000);
 
 // Laeuft nicht standardmaessig mit: verdoppelt die Suite-Laufzeit.

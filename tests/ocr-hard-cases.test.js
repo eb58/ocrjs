@@ -42,3 +42,19 @@ test('1-vs-7-coarse-grid-coincidence: bekannte, akzeptierte Grenze der Dimension
   expect(result.prediction).toBe(7);
   expect(result.correct).toBe(false);
 });
+
+test('8-vs-1-stray-mark-widens-bbox: ein abgesetzter Fleck weitet die Bounding-Box und staucht die "8" im groben Raster', () => {
+  // Ein 13px-Fleck weit links (Zeilen 64-66, Spalten 0-5), komplett getrennt vom
+  // eigentlichen "8"-Strich (Spalten ~60-90), zieht cropGlyph()'s Umschreibungsrechteck
+  // von ~30 auf ~90 Spalten Breite. Im 6x4-Raster (nur 4 Spalten) wird die "8" dadurch auf
+  // einen schmalen Streifen gequetscht, der zufaellig wie eine "1" aussieht (Distanz 672,
+  // Konfidenz 2.56 - "sicher", aber falsch). Behoben nicht an der Wurzel (der Fleck wird
+  // weiterhin mitgecropt), sondern dadurch, dass die Sicher-Schwelle fuer grobe Raster
+  // jetzt hochskaliert ist (secureThresholdFor in analysis.js): 2.56 reicht bei 6x4 nicht
+  // mehr, die Kaskade laeuft weiter zu 7x5/8x6, wo die "8" bereits ohne Abstimmung gewinnt.
+  const result = analyzeImage(path.join(fixtureDir, '8-vs-1-stray-mark-widens-bbox.png'), 8, 'eb', databases);
+
+  expect(result.prediction).toBe(8);
+  expect(result.correct).toBe(true);
+  expect(result.dimension).not.toBe('6x4');
+});
