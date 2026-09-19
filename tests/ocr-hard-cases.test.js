@@ -58,3 +58,19 @@ test('8-vs-1-stray-mark-widens-bbox: ein abgesetzter Fleck weitet die Bounding-B
   expect(result.correct).toBe(true);
   expect(result.dimension).not.toBe('6x4');
 });
+
+// Fuer jede Ziffer das schwierigste Testbild, das (Stand heute) noch korrekt erkannt wird:
+// je das mit der niedrigsten Konfidenz unter den korrekten Treffern im vollen EB-Testset.
+// Alle liefen bei der Auswahl durch vote() statt durch eine einzelne ueberzeugte Metrik -
+// echte Grenzfaelle, keine Ausreisser. Kein Fund/Fix wie oben, sondern ein Netz gegen
+// kuenftige Aenderungen, die die Erkennung insgesamt leicht verschlechtern, ohne dass ein
+// Gesamt-Genauigkeitstest (der nur den Durchschnitt sieht) das sofort auffallen wuerde.
+test.each([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])(
+  '%i-low-confidence-vote: schwierigstes noch korrekt erkanntes Beispiel',
+  (digit) => {
+    const result = analyzeImage(path.join(fixtureDir, `${digit}-low-confidence-vote.png`), digit, 'eb', databases);
+
+    expect(result.prediction).toBe(digit);
+    expect(result.correct).toBe(true);
+  }
+);
