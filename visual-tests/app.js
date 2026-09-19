@@ -9,13 +9,14 @@ const DEFAULT_SETTINGS = {
   sort: 'confidence',
   threshold: '2.4',
 };
-const state = { results: [], status: 'all', visible: PAGE_SIZE };
+const state = { durationMs: 0, results: [], status: 'all', visible: PAGE_SIZE };
 const $ = (selector) => document.querySelector(selector);
 const elements = {
   accuracy: $('#accuracy'),
   dataset: $('#dataset'),
   details: $('#details'),
   detailContent: $('#detailContent'),
+  duration: $('#duration'),
   digit: $('#digitFilter'),
   distribution: $('#distribution'),
   empty: $('#emptyState'),
@@ -101,7 +102,7 @@ const resetSettings = () => {
   });
   elements.export.disabled = true;
   saveSettings();
-  renderSummary(0);
+  renderSummary();
   renderCards();
 };
 
@@ -201,7 +202,9 @@ const renderCards = () => {
   elements.empty.hidden = state.results.length > 0;
 };
 
-const renderSummary = (durationMs) => {
+const formatDuration = (ms) => (ms < 60000 ? `${(ms / 1000).toFixed(1)} s` : `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')} min`);
+
+const renderSummary = () => {
   const correct = state.results.filter((result) => result.correct).length;
   const errors = state.results.length - correct;
   const uncertain = state.results.filter(isUncertainMatch).length;
@@ -211,7 +214,8 @@ const renderSummary = (durationMs) => {
   elements.errors.textContent = errors;
   elements.uncertain.textContent = uncertain;
   elements.falseSecure.textContent = falseSecure;
-  elements.total.title = `Laufzeit ${(durationMs / 1000).toFixed(1)} Sekunden`;
+  elements.duration.textContent = state.results.length ? formatDuration(state.durationMs) : '—';
+  elements.duration.title = state.results.length ? `${Math.round(state.results.length / (state.durationMs / 1000 || 1))} Bilder/s` : '';
   elements.distribution.innerHTML = Array.from({ length: 10 }, (_, digit) => {
     const results = state.results.filter((result) => result.expected === digit);
     const rate = results.length ? results.filter((result) => result.correct).length / results.length : 0;
@@ -226,8 +230,20 @@ const run = async () => {
   elements.run.disabled = true;
   elements.reset.disabled = true;
   elements.run.querySelector('span').textContent = 'OCR läuft …';
-  elements.gallery.innerHTML = '<div class="loading"><span></span><p>Bilder werden ausgewertet</p></div>';
+  elements.gallery.innerHTML =
+    '<div class="loading"><progress max="1" value="0"></progress><p>Bilder werden gezählt …</p></div>';
   elements.empty.hidden = true;
+  const startedAt = performance.now();
+  const progress = { results: [], processedPerDigit: 0, total: 0 };
+  const bar = elements.gallery.querySelector('progress');
+  const loading = elements.gallery.querySelector('p');
+  const showProgress = () => {
+    const elapsed = performance.now() - startedAt;
+    const done = progress.results.length;
+    const eta = done && progress.total > done ? ` · noch ca. ${formatDuration((elapsed / done) * (progress.total - done))}` : '';
+    loading.textContent = `${done} von ${progress.total} Bildern · ${formatDuration(elapsed)}${eta}`;
+  };
+  const timer = setInterval(showProgress, 100);
   try {
     const params = new URLSearchParams({
       dataset: elements.dataset.value,
@@ -239,8 +255,11 @@ const run = async () => {
     const batchSize = 20;
     const limit = Number(params.get('limit'));
     const offset = Number(params.get('offset'));
-    const progress = { results: [], durationMs: 0, processedPerDigit: 0 };
-    const loading = elements.gallery.querySelector('p');
+    const planResponse = await fetch(`/api/plan?${params}`);
+    const plan = await planResponse.json();
+    if (!planResponse.ok) throw new Error(plan.error || 'Auswertung fehlgeschlagen');
+    progress.total = bar.max = plan.total;
+    showProgress();
     while (!limit || progress.processedPerDigit < limit) {
       const count = limit ? Math.min(batchSize, limit - progress.processedPerDigit) : batchSize;
       params.set('limit', String(count));
@@ -249,20 +268,22 @@ const run = async () => {
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'Auswertung fehlgeschlagen');
       progress.results.push(...payload.results);
-      progress.durationMs += payload.durationMs;
       progress.processedPerDigit += count;
-      loading.textContent = `${progress.results.length} Bilder ausgewertet …`;
+      bar.value = progress.results.length;
+      showProgress();
       if (!payload.results.length) break;
     }
     // Restore the server's digit-first ordering across batch boundaries.
     state.results = progress.results.sort((a, b) => a.expected - b.expected);
+    state.durationMs = performance.now() - startedAt;
     state.visible = PAGE_SIZE;
     elements.export.disabled = false;
-    renderSummary(progress.durationMs);
+    renderSummary();
     renderCards();
   } catch (error) {
     elements.gallery.innerHTML = `<div class="error-message"><strong>Auswertung nicht möglich</strong><p>${error.message}</p></div>`;
   } finally {
+    clearInterval(timer);
     elements.run.disabled = false;
     elements.reset.disabled = false;
     elements.run.querySelector('span').textContent = 'Erneut auswerten';
@@ -322,7 +343,7 @@ elements.sort.addEventListener('change', () => {
 });
 elements.threshold.addEventListener('input', () => {
   saveSettings();
-  renderSummary(0);
+  renderSummary();
   resetAndRender();
 });
 elements.statusFilter.addEventListener('click', (event) => {

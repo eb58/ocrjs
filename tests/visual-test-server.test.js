@@ -1,7 +1,7 @@
 const http = require('http');
 const { PNG } = require('pngjs');
 const { analyzeImage, listTasks, loadDatabases } = require('../src/analysis');
-const { createServer, normalizePng, runAnalysis, stopWorkers } = require('../src/visual-test-server');
+const { createServer, normalizePng, planAnalysis, runAnalysis, stopWorkers } = require('../src/visual-test-server');
 
 afterAll(() => stopWorkers());
 
@@ -56,6 +56,18 @@ describe('runAnalysis via worker pool', () => {
 
   test('rejects an unknown dataset', async () => {
     await expect(runAnalysis({ ...params, dataset: 'unbekannt' })).rejects.toThrow('Unbekannter Datensatz');
+  });
+});
+
+describe('planAnalysis', () => {
+  test('counts the images a run will process', () => {
+    expect(planAnalysis({ dataset: 'eb', limit: 2, offset: 0 })).toEqual({
+      total: listTasks({ dataset: 'eb', limit: 2, offset: 0 }).length,
+    });
+  });
+
+  test('rejects an unknown dataset', () => {
+    expect(() => planAnalysis({ dataset: 'unbekannt', limit: 2, offset: 0 })).toThrow('Unbekannter Datensatz');
   });
 });
 

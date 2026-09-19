@@ -163,7 +163,12 @@ const runAnalysis = async ({ dataset, limit, offset, mode = 'auto', secureThresh
   return { durationMs: Date.now() - startedAt, results, total: results.length };
 };
 
-const serveImage = (response, pathname) => {
+// Liefert vorab die Gesamtzahl, damit der Client trotz Batches einen Fortschritt anzeigen kann.
+const planAnalysis = ({ dataset, limit, offset }) => (
+  validate({ dataset, mode: 'auto' }), { total: listTasks({ dataset, limit, offset }).length }
+);
+
+const serveImage =(response, pathname) => {
   const match = pathname.match(/^\/image\/(test|train)\/(eb|mnist)\/(\d)\/(.+)$/);
   if (!match) return sendFile(response);
   const [, type, dataset, digit, encodedName] = match;
@@ -182,14 +187,22 @@ const handleRequest = (request, response) => {
     return;
   }
   const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+  const dataset = url.searchParams.get('dataset') || 'eb';
+  const requestedLimit = Number(url.searchParams.get('limit'));
+  const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 0), 5000) : 20;
+  const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
+  if (url.pathname === '/api/plan') {
+    try {
+      json(response, 200, planAnalysis({ dataset, limit, offset }));
+    } catch (error) {
+      json(response, 500, { error: error.message });
+    }
+    return;
+  }
   if (url.pathname === '/api/run') {
-    const dataset = url.searchParams.get('dataset') || 'eb';
     const mode = url.searchParams.get('mode') || 'auto';
     const requestedThreshold = Number(url.searchParams.get('threshold'));
     const secureThreshold = Number.isFinite(requestedThreshold) ? Math.min(Math.max(requestedThreshold, 1), 100) : 2.4;
-    const requestedLimit = Number(url.searchParams.get('limit'));
-    const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 0), 5000) : 20;
-    const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
     runAnalysis({ dataset, limit, offset, mode, secureThreshold })
       .then((payload) => json(response, 200, payload))
       .catch((error) => json(response, 500, { error: error.message }));
@@ -209,4 +222,4 @@ if (require.main === module) {
   createServer().listen(port, () => console.log(`OCR-Prüfstand: http://localhost:${port}`));
 }
 
-module.exports = { analyzeImage, createServer, normalizePng, runAnalysis, stopWorkers };
+module.exports = { analyzeImage, createServer, normalizePng, planAnalysis, runAnalysis, stopWorkers };
