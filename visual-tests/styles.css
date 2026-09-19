@@ -126,6 +126,7 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  overflow: hidden;
 }
 .summary article + article {
   padding-left: 20px;
@@ -139,6 +140,11 @@ button:focus-visible {
 .summary article strong {
   white-space: nowrap;
   font: 600 clamp(1.8rem, 3vw, 2.8rem) / 1 monospace;
+}
+/* "1:09 min" ist deutlich laenger als die anderen Kachelwerte (Zahlen, Prozente) und
+   wuerde bei deren Schriftgroesse in die Ziffernverteilung ueberlaufen. */
+#duration {
+  font-size: clamp(1.2rem, 2vw, 1.9rem);
 }
 .distribution {
   padding: 18px 0 18px 24px;
