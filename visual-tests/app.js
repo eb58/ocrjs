@@ -285,6 +285,9 @@ const run = async () => {
       progress.results.push(...payload.results);
       progress.processedPerDigit += count;
       bar.value = progress.results.length;
+      state.results = progress.results;
+      state.durationMs = performance.now() - startedAt;
+      renderSummary();
       showProgress();
       if (!payload.results.length) break;
     }
