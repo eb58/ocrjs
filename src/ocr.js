@@ -231,13 +231,21 @@ const ocr = () => {
     const cache = new Map();
     return db => {
       const primaryVector = primaryGlyph.scaleDown(db.dimr, db.dimc).imgdata;
-      const { secure, attempts } = searchSecure(primaryVector, db);
-      if (secure) return secure.slice(0, 3);
+      const primary = searchSecure(primaryVector, db);
+      if (primary.secure) return primary.secure.slice(0, 3);
+
       if (!cache.has('cleaned')) cache.set('cleaned', base.clone().extractGlyph().cropGlyph());
       const cleanedVector = cache.get('cleaned').scaleDown(db.dimr, db.dimc).imgdata;
       const identical = primaryVector.every((value, index) => value === cleanedVector[index]);
-      const cleaned = identical ? attempts[0] : findNearestDigit(cleanedVector, db, 10);
-      return vote([...attempts, cleaned]).slice(0, 3);
+      // Bei identischen Pixeln (nur ein Bestandteil, extractGlyph aendert nichts) liefert
+      // die bereinigte Sicht keine neue Information - die Kaskade dort nochmal zu laufen
+      // waere reine Verdopplung, deshalb dann nur die Primaersicht abstimmen lassen.
+      if (identical) return vote(primary.attempts).slice(0, 3);
+
+      const cleaned = searchSecure(cleanedVector, db);
+      if (cleaned.secure) return cleaned.secure.slice(0, 3);
+
+      return vote([...primary.attempts, ...cleaned.attempts]).slice(0, 3);
     };
   };
   const recImage = (pngfile, dbs) => dbs.length ? dbs.map(createRecognizer(pngfile)) : [];
@@ -248,6 +256,7 @@ const ocr = () => {
     createRecognizer,
     findNearestDigit,
     recognizeImage,
+    vote,
   };
 }
 

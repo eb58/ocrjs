@@ -159,7 +159,22 @@ const showDetails = (result) => {
   const head = el(
     'div',
     { className: 'detail-head' },
-    el('div', { className: 'detail-image' }, el('img', { src: result.image, alt: `Testbild, erwartet ${result.expected}` })),
+    el(
+      'div',
+      { className: 'detail-image' },
+      el(
+        'figure',
+        {},
+        el('img', { src: result.image, alt: `Testbild, erwartet ${result.expected}` }),
+        el('figcaption', { textContent: 'Original' })
+      ),
+      el(
+        'figure',
+        { className: 'query-grid' },
+        el('img', { src: result.queryImage, alt: `Verglichenes Raster, ${result.dimension}` }),
+        el('figcaption', { textContent: `Raster ${result.dimension}` })
+      )
+    ),
     el(
       'div',
       {},

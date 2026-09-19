@@ -6,7 +6,7 @@ const { URL } = require('url');
 const { Worker } = require('worker_threads');
 const { PNG } = require('pngjs');
 const img = require('./img');
-const { analyzeImage, dataPath, listTasks, validate } = require('./analysis');
+const { analyzeImage, dataPath, dimensions, listTasks, validate } = require('./analysis');
 
 const projectPath = path.resolve(__dirname, '..');
 const publicPath = path.join(projectPath, 'visual-tests');
@@ -70,6 +70,42 @@ const sendNormalizedImage = (response, file) => {
   }
   response.writeHead(200, { 'Cache-Control': 'no-cache', 'Content-Type': 'image/png' });
   response.end(normalizePng(fs.readFileSync(file)));
+};
+
+// Rendert das tatsaechlich mit der DB verglichene Raster (die auf dimr x dimc
+// herunterskalierten Fuellstaende je Zelle, 0-100%) als vergroessertes Graustufenbild -
+// zeigt, was die Suche wirklich sieht, nicht nur das Originalbild.
+const CELL_SIZE = 16;
+const gridToPngBuffer = (imgdata, dimr, dimc) => {
+  const png = new PNG({ width: dimc * CELL_SIZE, height: dimr * CELL_SIZE });
+  for (let r = 0; r < dimr; r++) {
+    for (let c = 0; c < dimc; c++) {
+      const value = 255 - Math.round((imgdata[r * dimc + c] / 100) * 255);
+      for (let y = 0; y < CELL_SIZE; y++) {
+        for (let x = 0; x < CELL_SIZE; x++) {
+          const offset = (((r * CELL_SIZE + y) * png.width + (c * CELL_SIZE + x)) * 4);
+          png.data[offset] = value;
+          png.data[offset + 1] = value;
+          png.data[offset + 2] = value;
+          png.data[offset + 3] = 255;
+        }
+      }
+    }
+  }
+  return PNG.sync.write(png);
+};
+
+const sendQueryGrid = (response, file, dimension) => {
+  const [dimr, dimc] = dimension.split('x').map(Number);
+  if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile() || !dimensions.includes(dimension)) {
+    response.writeHead(404);
+    response.end('Not found');
+    return;
+  }
+  const source = PNG.sync.read(fs.readFileSync(file));
+  const imgdata = img().frompng(source).adjustBW().despeckle().cropGlyph().scaleDown(dimr, dimc).imgdata;
+  response.writeHead(200, { 'Cache-Control': 'no-cache', 'Content-Type': 'image/png' });
+  response.end(gridToPngBuffer(imgdata, dimr, dimc));
 };
 
 // Worker-Pool: Die Erkennung pro Bild ist unabhaengig, aber jeder Worker muss die
@@ -169,6 +205,16 @@ const planAnalysis = ({ dataset, limit, offset }) => (
 );
 
 const serveImage =(response, pathname) => {
+  const queryMatch = pathname.match(/^\/image\/query\/([^/]+)\/(test|train)\/(eb|mnist)\/(\d)\/(.+)$/);
+  if (queryMatch) {
+    const [, dimension, type, dataset, digit, encodedName] = queryMatch;
+    const file = safeFile(
+      path.join(dataPath, 'imgs', dataset, type, `img${digit}`),
+      path.basename(decodeURIComponent(encodedName))
+    );
+    sendQueryGrid(response, file, dimension);
+    return;
+  }
   const match = pathname.match(/^\/image\/(test|train)\/(eb|mnist)\/(\d)\/(.+)$/);
   if (!match) return sendFile(response);
   const [, type, dataset, digit, encodedName] = match;

@@ -1,4 +1,5 @@
 const http = require('http');
+const path = require('path');
 const { PNG } = require('pngjs');
 const { analyzeImage, listTasks, loadDatabases } = require('../src/analysis');
 const { createServer, normalizePng, planAnalysis, runAnalysis, stopWorkers } = require('../src/visual-test-server');
@@ -114,5 +115,51 @@ describe('handleRequest method guard', () => {
     const res = await request('GET', '/api/run?dataset=unknown');
 
     expect(res.statusCode).toBe(500);
+  });
+});
+
+describe('/image/query - das tatsaechlich verglichene Raster', () => {
+  let server;
+  let baseUrl;
+  const [{ file }] = listTasks({ dataset: 'eb', limit: 1, offset: 0 });
+  const filename = path.basename(file);
+  const digit = path.basename(path.dirname(file)).replace('img', '');
+
+  beforeAll((done) => {
+    server = createServer();
+    server.listen(0, () => {
+      baseUrl = `http://localhost:${server.address().port}`;
+      done();
+    });
+  });
+
+  afterAll((done) => {
+    server.close(done);
+  });
+
+  const requestBody = (path) =>
+    new Promise((resolve, reject) => {
+      const req = http.request(`${baseUrl}${path}`, { agent: false }, (res) => {
+        const chunks = [];
+        res.on('data', (chunk) => chunks.push(chunk));
+        res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) }));
+      });
+      req.on('error', reject);
+      req.end();
+    });
+
+  test('renders an upscaled grayscale grid sized to the requested dimension', async () => {
+    const res = await requestBody(`/image/query/8x6/test/eb/${digit}/${encodeURIComponent(filename)}`);
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toBe('image/png');
+    const png = PNG.sync.read(res.body);
+    expect([png.width, png.height]).toEqual([6 * 16, 8 * 16]);
+  });
+
+  test('rejects an unknown dimension', async () => {
+    const res = await requestBody(`/image/query/9x9/test/eb/${digit}/${encodeURIComponent(filename)}`);
+
+    expect(res.status).toBe(404);
   });
 });

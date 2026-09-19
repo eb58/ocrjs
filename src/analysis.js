@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const ocrengine = require('./ocr')();
 
-const { confidence } = ocrengine;
+const { confidence, vote } = ocrengine;
 const dataPath = path.join(path.resolve(__dirname, '..'), 'data');
 const datasets = new Set(['eb', 'mnist']);
 const dimensions = ['6x4', '7x5', '8x6'];
@@ -17,14 +17,28 @@ const loadDatabases = (dataset, mode) =>
     }));
 
 const imageUrl = (type, dataset, digit, name) => `/image/${type}/${dataset}/${digit}/${encodeURIComponent(name)}`;
+const queryImageUrl = (dimension, type, dataset, digit, name) =>
+  `/image/query/${dimension}/${type}/${dataset}/${digit}/${encodeURIComponent(name)}`;
 
 const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4) => {
   const recognize = ocrengine.createRecognizer(file);
-  const best = databases.reduce((selected, { dimension, data }) => {
-    if (selected && selected.confidence >= secureThreshold) return selected;
+  const attempts = [];
+  let secure;
+  for (const { dimension, data } of databases) {
     const candidates = recognize(data);
-    return { candidates, confidence: confidence(candidates), dimension, trainingPath: data.dir };
-  }, undefined);
+    attempts.push(candidates);
+    if (confidence(candidates) >= secureThreshold) {
+      secure = { candidates, dimension };
+      break;
+    }
+  }
+  // Keine Dimension war sicher: statt blind der letzten (feinsten) zu vertrauen, werden
+  // alle versuchten Dimensionen wie die Sichten/Abstandsmasse in ocr.js gewichtet
+  // kombiniert. Fuer Anzeige/Rasterbild wird trotzdem die feinste Dimension genannt.
+  const best = secure || {
+    candidates: vote(attempts).slice(0, 3),
+    dimension: databases[databases.length - 1].dimension,
+  };
   const prediction = best.candidates[0].digit;
   const candidates = best.candidates.map((candidate) => ({
     digit: candidate.digit,
@@ -33,14 +47,16 @@ const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4)
     name: candidate.name,
   }));
 
+  const filename = path.basename(file);
   return {
     candidates,
-    confidence: best.confidence,
+    confidence: confidence(best.candidates),
     correct: prediction === expected,
     dimension: best.dimension,
     expected,
-    filename: path.basename(file),
-    image: imageUrl('test', dataset, expected, path.basename(file)),
+    filename,
+    image: imageUrl('test', dataset, expected, filename),
+    queryImage: queryImageUrl(best.dimension, 'test', dataset, expected, filename),
     prediction,
   };
 };
@@ -61,4 +77,15 @@ const validate = ({ dataset, mode }) => {
   if (!modes.has(mode)) throw new Error('Unbekannter Erkennungsmodus');
 };
 
-module.exports = { analyzeImage, dataPath, datasets, dimensions, imageUrl, listTasks, loadDatabases, modes, validate };
+module.exports = {
+  analyzeImage,
+  dataPath,
+  datasets,
+  dimensions,
+  imageUrl,
+  listTasks,
+  loadDatabases,
+  modes,
+  queryImageUrl,
+  validate,
+};
