@@ -182,8 +182,11 @@ test('prepare can discard disconnected marks before cropping the glyph', () => {
     data: Array.from({ length: 80 }, (_, index) => {
       const row = Math.floor(index / 10);
       const column = index % 10;
+      // 2x2, nicht 1 Pixel breit: eine duenne Linie haette so wenige gleichfarbige
+      // Nachbarn, dass despeckle() sie ueberall entfernt (auch abseits der Kante) - das
+      // waere kein Test von extractGlyph() mehr, sondern nur von despeckle().
       const black =
-        (row >= 1 && row <= 6 && column >= 6 && column <= 9) || (row >= 2 && row <= 5 && column === 0);
+        (row >= 1 && row <= 6 && column >= 6 && column <= 9) || (row >= 2 && row <= 3 && column <= 1);
       return black ? [0, 0, 0, 255] : [255, 255, 255, 255];
     }).flat(),
   };

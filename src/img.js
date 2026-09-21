@@ -114,16 +114,23 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
 
   const despeckle = (N = 3) => {
     const despeckle2 = (COLOR) => {
-      // Flecken <= N Pixel werden entfernt
-      for (let r = 1; r < h - 1; r++) {
+      // Flecken <= N Pixel werden entfernt - auch auf der Bildkante, wo Nachbarn
+      // ausserhalb des Bildes einfach nicht mitzaehlen (statt die Kante ganz
+      // auszusparen: ein Fleck exakt auf der letzten Zeile/Spalte war sonst
+      // unantastbar und konnte cropGlyph()'s Rechteck unbemerkt aufblaehen).
+      for (let r = 0; r < h; r++) {
         const rr = r * w;
-        for (let c = 1; c < w - 1; c++) {
+        for (let c = 0; c < w; c++) {
           if (imgdata[rr + c] !== COLOR) continue;
           let cnt = 0;
           for (let i = -1; i <= 1; i++) {
-            const rri = (r + i) * w + c;
+            const nr = r + i;
+            if (nr < 0 || nr >= h) continue;
+            const rri = nr * w;
             for (let j = -1; j <= 1; j++) {
-              if (imgdata[rri + j] === COLOR) {
+              const nc = c + j;
+              if (nc < 0 || nc >= w) continue;
+              if (imgdata[rri + nc] === COLOR) {
                 cnt++;
               }
             }
