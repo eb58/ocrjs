@@ -261,7 +261,7 @@ const ocr = () => {
       throw new RangeError('candidateLimit must be a non-negative integer (0 means full search)');
     }
     const base = img().frompng(png(pngfile)).adjustBW().despeckle();
-    const primaryGlyph = base.clone().extractGlyphFarFromBiggest(20).cropGlyph();
+    const primaryGlyph = base.clone().extractGlyphFarFromBiggest(15).cropGlyph();
     const cache = new Map();
     return db => {
       const primaryVector = primaryGlyph.scaleDown(db.dimr, db.dimc).imgdata;

@@ -33,7 +33,7 @@ const generateDBsForEBData = (dimr, dimc, traindata, testdata, prefix) => {
       .frompng(PNG.sync.read(fs.readFileSync(path.join(xdir, name))))
       .adjustBW()
       .despeckle()
-      .extractGlyphFarFromBiggest(20)
+      .extractGlyphFarFromBiggest(15)
       .cropGlyph()
       .scaleDown(dimr, dimc);
   fs.writeFileSync(
