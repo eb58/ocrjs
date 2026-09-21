@@ -93,13 +93,13 @@ const ocr = () => {
   };
   const searchRows = (query, db, dimr, dimc) => {
     const window = Math.max(1, Math.floor(dimr / 6));
+    const starts = Array.from({ length: dimr }, (_, row) => Math.max(0, row - window));
+    const ends = Array.from({ length: dimr }, (_, row) => Math.min(dimr - 1, row + window));
     return DIGITS.map(digit => {
       const perRow = new Array(dimr).fill(Number.MAX_SAFE_INTEGER);
       db[digit].forEach(dbi => {
         for (let row = 0; row < dimr; row++) {
-          const a = Math.max(0, row - window);
-          const e = Math.min(dimr - 1, row + window);
-          const dist = distRowBand(dbi.imgvec, query, dimc, row, a, e, perRow[row]);
+          const dist = distRowBand(dbi.imgvec, query, dimc, row, starts[row], ends[row], perRow[row]);
           if (dist < perRow[row]) perRow[row] = dist;
         }
       });
@@ -119,13 +119,13 @@ const ocr = () => {
   };
   const searchCols = (query, db, dimr, dimc) => {
     const window = Math.max(1, Math.floor(dimc / 4));
+    const starts = Array.from({ length: dimc }, (_, col) => Math.max(0, col - window));
+    const ends = Array.from({ length: dimc }, (_, col) => Math.min(dimc - 1, col));
     return DIGITS.map(digit => {
       const perCol = new Array(dimc).fill(Number.MAX_SAFE_INTEGER);
       db[digit].forEach(dbi => {
         for (let col = 0; col < dimc; col++) {
-          const a = Math.max(0, col - window);
-          const e = Math.min(dimc - 1, col);
-          const dist = distColBand(dbi.imgvec, query, dimr, dimc, col, a, e, perCol[col]);
+          const dist = distColBand(dbi.imgvec, query, dimr, dimc, col, starts[col], ends[col], perCol[col]);
           if (dist < perCol[col]) perCol[col] = dist;
         }
       });
@@ -136,11 +136,7 @@ const ocr = () => {
   // Wie Row/Col, aber zweidimensional: pro Zelle wird das beste lokale Fenster gesucht,
   // toleriert kleine Verzerrungen in beide Richtungen gleichzeitig. Teuerste der vier
   // Zusatzmasse (ein Fenster pro Zelle statt pro Zeile/Spalte), daher zuletzt probiert.
-  const distQuad = (v1, v2, dimr, dimc, rowWindow, colWindow, row, col, bestDistance) => {
-    const ar = Math.max(0, row - rowWindow);
-    const er = Math.min(dimr - 1, row + rowWindow);
-    const ac = Math.max(0, col - colWindow);
-    const ec = Math.min(dimc - 1, col + colWindow);
+  const distQuad = (v1, v2, dimc, ar, er, ac, ec, row, col, bestDistance) => {
     let sum = 0;
     for (let r = ar; r <= er; r++) {
       const rs = r * dimc;
@@ -155,13 +151,21 @@ const ocr = () => {
   const searchQuad = (query, db, dimr, dimc) => {
     const rowWindow = Math.max(1, Math.floor(dimr / 6));
     const colWindow = Math.max(1, Math.floor(dimc / 4));
+    const rowStarts = Array.from({ length: dimr }, (_, row) => Math.max(0, row - rowWindow));
+    const rowEnds = Array.from({ length: dimr }, (_, row) => Math.min(dimr - 1, row + rowWindow));
+    const colStarts = Array.from({ length: dimc }, (_, col) => Math.max(0, col - colWindow));
+    const colEnds = Array.from({ length: dimc }, (_, col) => Math.min(dimc - 1, col + colWindow));
     return DIGITS.map(digit => {
       const perCell = new Array(dimr * dimc).fill(Number.MAX_SAFE_INTEGER);
       db[digit].forEach(dbi => {
         for (let row = 0; row < dimr; row++) {
           for (let col = 0; col < dimc; col++) {
             const idx = row * dimc + col;
-            const dist = distQuad(dbi.imgvec, query, dimr, dimc, rowWindow, colWindow, row, col, perCell[idx]);
+            const dist = distQuad(
+              dbi.imgvec, query, dimc,
+              rowStarts[row], rowEnds[row], colStarts[col], colEnds[col],
+              row, col, perCell[idx],
+            );
             if (dist < perCell[idx]) perCell[idx] = dist;
           }
         }
