@@ -29,7 +29,13 @@ const generateDBsForEBData = (dimr, dimc, traindata, testdata, prefix) => {
 
   // generate training db
   const computeImage = (xdir, name, dimr, dimc) =>
-    img().frompng(PNG.sync.read(fs.readFileSync(path.join(xdir, name)))).prepare(dimr, dimc);
+    img()
+      .frompng(PNG.sync.read(fs.readFileSync(path.join(xdir, name))))
+      .adjustBW()
+      .despeckle()
+      .extractGlyphFarFromBiggest(20)
+      .cropGlyph()
+      .scaleDown(dimr, dimc);
   fs.writeFileSync(
     path.join(dbPath, `${prefix}-train-${dimstr}.js`),
     'module.exports = ' + JSON.stringify(genEBDB(traindata, dimr, dimc, computeImage))

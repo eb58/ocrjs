@@ -2,7 +2,7 @@ jest.mock('fs', () => ({ readFileSync: jest.fn(() => Buffer.from([])) }));
 jest.mock('pngjs', () => ({ PNG: { sync: { read: jest.fn(() => ({})) } } }));
 jest.mock('../src/img', () => () => {
   const image = { imgdata: [0] };
-  ['frompng', 'adjustBW', 'despeckle', 'cropGlyph', 'clone', 'extractGlyph', 'scaleDown'].forEach(name => {
+  ['frompng', 'adjustBW', 'despeckle', 'cropGlyph', 'clone', 'extractGlyph', 'extractGlyphFarFromBiggest', 'scaleDown'].forEach(name => {
     image[name] = () => image;
   });
   return image;

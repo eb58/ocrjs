@@ -307,6 +307,57 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
     return api;
   };
 
+  // Verwirft Teile, die weiter als maxGap (Chebyshev-Abstand der Umschreibungsrechtecke)
+  // vom groessten Teil entfernt liegen - unabhaengig von ihrer eigenen Groesse. Anders als
+  // extractGlyph() (Groesse ODER Position im margenerweiterten Rechteck) zaehlt hier nur
+  // der tatsaechliche Abstand zum Hauptstrich.
+  const extractGlyphFarFromBiggest = (maxGap) => {
+    const GLYPHPART_MINSIZE = 3;
+    const irect = { rmin: 0, rmax: h, cmin: 0, cmax: w };
+    const parts = [];
+    let cnt_area = 0;
+    let mark = 15;
+    while ((cnt_area = region8(irect, 9)) > 0) {
+      if (cnt_area <= GLYPHPART_MINSIZE) {
+        remark(9, WHITE);
+      } else {
+        remark(9, mark);
+        parts.push({ cnt_area, mark });
+        mark++;
+      }
+    }
+    if (parts.length <= 1) {
+      parts.forEach((part) => remark(part.mark, BLACK));
+      return api;
+    }
+    // Ein Durchlauf statt eines Scans pro Teil: alle Umschreibungsrechtecke auf einmal
+    // einsammeln (box() je Teil waere bei vielen kleinen Flecken O(Teile * Bildgroesse)).
+    const rects = {};
+    for (let r = 0; r < h; r++) {
+      const rr = r * w;
+      for (let c = 0; c < w; c++) {
+        const v = imgdata[rr + c];
+        if (v < 15) continue;
+        const rect = rects[v];
+        if (!rect) rects[v] = { rmin: r, rmax: r, cmin: c, cmax: c };
+        else {
+          if (r > rect.rmax) rect.rmax = r;
+          if (c < rect.cmin) rect.cmin = c;
+          if (c > rect.cmax) rect.cmax = c;
+        }
+      }
+    }
+    parts.forEach((part) => (part.rect = rects[part.mark]));
+    const biggest = parts.reduce((current, part) => (part.cnt_area > current.cnt_area ? part : current));
+    const gap = (a, b) => {
+      const rowGap = Math.max(0, Math.max(a.rmin - b.rmax, b.rmin - a.rmax));
+      const colGap = Math.max(0, Math.max(a.cmin - b.cmax, b.cmin - a.cmax));
+      return Math.max(rowGap, colGap);
+    };
+    parts.forEach((part) => remark(part.mark, gap(biggest.rect, part.rect) <= maxGap ? BLACK : WHITE));
+    return api;
+  };
+
   const extractBiggestGlyph = () => {
     const irect = { rmin: 0, rmax: h, cmin: 0, cmax: w };
     const parts = [];
@@ -336,6 +387,7 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
     cropGlyphInner,
     createImageWithMargin,
     extractGlyph,
+    extractGlyphFarFromBiggest,
     extractBiggestGlyph,
     prepare,
     scaleUp,
