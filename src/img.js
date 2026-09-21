@@ -120,7 +120,7 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
       // unantastbar und konnte cropGlyph()'s Rechteck unbemerkt aufblaehen).
       for (let r = 0; r < h; r++) {
         const rr = r * w;
-        for (let c = 0; c < w; c++) {
+        pixels: for (let c = 0; c < w; c++) {
           if (imgdata[rr + c] !== COLOR) continue;
           let cnt = 0;
           for (let i = -1; i <= 1; i++) {
@@ -132,6 +132,7 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
               if (nc < 0 || nc >= w) continue;
               if (imgdata[rri + nc] === COLOR) {
                 cnt++;
+                if (cnt > N) continue pixels;
               }
             }
           }

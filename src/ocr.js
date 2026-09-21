@@ -87,7 +87,7 @@ const ocr = () => {
       let drow = 0;
       for (let c = 0; c < dimc; c++) { const d = v1[rs + c] - v2[rs + c]; drow += d * d; }
       sum += r === row ? 2 * drow : drow;
-      if (sum > bestDistance) return sum;
+      if (sum >= bestDistance) return sum;
     }
     return sum;
   };
@@ -113,7 +113,7 @@ const ocr = () => {
       let dcol = 0;
       for (let r = 0; r < dimr; r++) { const n = r * dimc + c; const d = v1[n] - v2[n]; dcol += d * d; }
       sum += c === col ? 2 * dcol : dcol;
-      if (sum > bestDistance) return sum;
+      if (sum >= bestDistance) return sum;
     }
     return sum;
   };
@@ -147,7 +147,7 @@ const ocr = () => {
       for (let c = ac; c <= ec; c++) {
         const d = v1[rs + c] - v2[rs + c];
         sum += r === row && c === col ? 2 * d * d : d * d;
-        if (sum > bestDistance) return sum;
+        if (sum >= bestDistance) return sum;
       }
     }
     return sum;
