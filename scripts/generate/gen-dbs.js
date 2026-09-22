@@ -2,7 +2,7 @@ const range = n => [...Array(n).keys()];
 const fs = require('fs');
 const path = require('path');
 const PNG = require('pngjs').PNG;
-const img = require('../img');
+const img = require('../../src/img');
 
 const projectPath = path.resolve(__dirname, '../..');
 const dataPath = path.join(projectPath, 'data');

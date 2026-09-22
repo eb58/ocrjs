@@ -1,6 +1,6 @@
 # Kandidatenvorauswahl (2026-09-19)
 
-Reproduktion: `node scripts/benchmark-shortlist.js` im Projektverzeichnis.
+Reproduktion: `node scripts/benchmarks/benchmark-shortlist.js` im Projektverzeichnis.
 Ergebnisse inklusive reparierter und neu falscher Bilder stehen in
 `benchmark-shortlist-results.json` (wird beim erneuten Lauf ersetzt).
 
@@ -37,7 +37,7 @@ Standard `0` bedeutet unveraenderte Vollsuche. Der Pruefstand verwendet den Stan
 
 ## Nachmessung mit 128 Kandidaten
 
-Aufruf: `node scripts/benchmark-shortlist.js 128`. Weitere positive Kandidatenzahlen
+Aufruf: `node scripts/benchmarks/benchmark-shortlist.js 128`. Weitere positive Kandidatenzahlen
 koennen als Argumente folgen; die Vollsuche wird immer als Referenz vorangestellt.
 Rohdaten dieses Laufs: `benchmark-shortlist-128-results.json`.
 
@@ -56,7 +56,7 @@ Die Vollsuche bleibt Standard; auch 128 verursacht auf EB netto zehn weitere Feh
 
 ## Gezielte Vollsuche bei geringer Konfidenz
 
-Aufruf: `node scripts/benchmark-shortlist-fallback.js`. Rohdaten:
+Aufruf: `node scripts/benchmarks/benchmark-shortlist-fallback.js`. Rohdaten:
 `benchmark-shortlist-fallback-results.json`. Ausgangspunkt sind 128 Kandidaten.
 Nur Ergebnisse unter der jeweiligen Konfidenz werden mit der Vollsuche wiederholt.
 

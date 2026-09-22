@@ -2,7 +2,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
-const { analyzeImage, listTasks, loadDatabases } = require('../src/analysis');
+const { analyzeImage, listTasks, loadDatabases } = require('../../src/analysis');
 
 const thresholds = [1.1, 1.25, 1.5, 2, 2.4];
 

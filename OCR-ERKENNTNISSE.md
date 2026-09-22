@@ -55,9 +55,9 @@ Eine einfach zusammengeklebte Datenbank würde die Laufzeit grob vervier- bis ve
 
 - `npm test`: zuletzt 7 Suiten, 139 Tests plus 1 übersprungener Test.
 - `npm run lint`: sauber.
-- `scripts/benchmark-shortlist.md`: Kandidatenvorauswahl 16/32/64/128.
-- `scripts/benchmark-shortlist-fallback.js`: Konfidenz-Rückfallmessungen.
-- `scripts/benchmark-priority.md`: beste Kandidaten zuerst, danach alle; Ergebnisse waren gleich, aber nicht schneller.
+- `scripts/benchmarks/benchmark-shortlist.md`: Kandidatenvorauswahl 16/32/64/128.
+- `scripts/benchmarks/benchmark-shortlist-fallback.js`: Konfidenz-Rückfallmessungen.
+- `scripts/benchmarks/benchmark-priority.md`: beste Kandidaten zuerst, danach alle; Ergebnisse waren gleich, aber nicht schneller.
 
 Der MNIST-Kaskadentest ist in `tests/ocr-cascade.test.js` standardmäßig übersprungen, weil er die Laufzeit stark verlängert. Für belastbare Änderungen sollte er gezielt aktiviert oder über einen Benchmark ausgeführt werden.
 

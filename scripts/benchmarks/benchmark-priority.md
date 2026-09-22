@@ -1,6 +1,6 @@
 # Bevorzugte Kandidaten, weiterhin vollstaendige Suche
 
-Aufruf: `node scripts/benchmark-priority.js`.
+Aufruf: `node scripts/benchmarks/benchmark-priority.js`.
 Rohdaten: `benchmark-priority-results.json` (wird bei Wiederholung ersetzt).
 
 Der bestehende Zellvergleich merkt optional die besten 32 Trainingsbilder pro Ziffer.

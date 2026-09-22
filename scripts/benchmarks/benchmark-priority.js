@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
-const { analyzeImage, listTasks, loadDatabases } = require('../src/analysis');
+const { analyzeImage, listTasks, loadDatabases } = require('../../src/analysis');
 
 if (!isMainThread) {
   const { dataset, tasks, priorityCount } = workerData;

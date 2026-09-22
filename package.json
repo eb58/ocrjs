@@ -9,8 +9,8 @@
   "license": "MIT",
   "description": "ocr for handwritten digits",
   "scripts": {
-    "gen-dbs": "node src/db-generators/gen-dbs",
-    "gen-images-from-mnist": "node src/db-generators/gen-images-from-mnist",
+    "gen-dbs": "node scripts/generate/gen-dbs",
+    "gen-images-from-mnist": "node scripts/generate/gen-images-from-mnist",
     "prepare": "git config core.hooksPath .githooks",
     "lint": "eslint src tests",
     "format": "prettier --write src tests",

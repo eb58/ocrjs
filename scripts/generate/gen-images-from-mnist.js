@@ -6,7 +6,7 @@ const ocrMnistImageGenerator = (prefix) => {
   const path = require('path');
   const mkdirp = require('mkdirp');
   const PNG = require('pngjs').PNG;
-  const createImage = require('../img');
+  const createImage = require('../../src/img');
 
   const DIM = 28;
   const DIMSQR = DIM * DIM;
