@@ -1,11 +1,11 @@
 const ocr = () => {
-  const SECURE_CONFIDENCE = 2.4
-  const fs = require('fs')
-  const PNG = require('pngjs').PNG
-  const img = require('./img')
+  const SECURE_CONFIDENCE = 2.4;
+  const fs = require('fs');
+  const PNG = require('pngjs').PNG;
+  const img = require('./img');
 
-  const range = n => [...Array(n).keys()]
-  const DIGITS = range(10)
+  const range = (n) => [...Array(n).keys()];
+  const DIGITS = range(10);
   const distFct = (v1, v2, bestDistance) => {
     let sum = 0;
     for (let i = 0; i < v1.length; i++) {
@@ -14,17 +14,21 @@ const ocr = () => {
       if (sum >= bestDistance) return sum;
     }
     return sum;
-  }
+  };
 
-  const findNearestDigit = (imgvec, db, limit = 3, seeds, seedCount = 32) => DIGITS
-    .map(digit => {
+  const findNearestDigit = (imgvec, db, limit = 3, seeds, seedCount = 32) =>
+    DIGITS.map((digit) => {
       const best = { digit, dist: Number.MAX_SAFE_INTEGER };
       const selected = seeds ? (seeds[digit] = []) : undefined;
-      db[digit].forEach(dbi => {
-        const threshold = selected ? (selected.length < seedCount ? Infinity : selected[selected.length - 1].dist) : best.dist;
+      db[digit].forEach((dbi) => {
+        const threshold = selected
+          ? selected.length < seedCount
+            ? Infinity
+            : selected[selected.length - 1].dist
+          : best.dist;
         const dist = distFct(imgvec, dbi.imgvec, threshold);
         if (selected && dist < threshold) {
-          const position = selected.findIndex(candidate => candidate.dist > dist);
+          const position = selected.findIndex((candidate) => candidate.dist > dist);
           selected.splice(position < 0 ? selected.length : position, 0, { sample: dbi, dist });
           if (selected.length > seedCount) selected.pop();
         }
@@ -36,10 +40,10 @@ const ocr = () => {
       });
       return best;
     })
-    .sort((a, b) => a.dist - b.dist)
-    .slice(0, limit);
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, limit);
 
-  const confidence = res => res[0] && res[1] ? (res[0].dist ? res[1].dist / res[0].dist : 99) : 0;
+  const confidence = (res) => (res[0] && res[1] ? (res[0].dist ? res[1].dist / res[0].dist : 99) : 0);
 
   // Zusaetzliche, verschiebungstolerante Abstandsmasse neben der einfachen
   // Zell-fuer-Zell-Distanz (distFct): portiert aus dem alten Recm/CharDatabase-System
@@ -47,9 +51,13 @@ const ocr = () => {
   // erst bei Unsicherheit nacheinander probiert - jede kann fuer sich ein sicheres
   // Ergebnis liefern, das die primaere Distanz allein nicht gefunden hat.
   const smoothCell = (vec, dimc, r, c) => {
-    let sum = 0, cnt = 0;
+    let sum = 0,
+      cnt = 0;
     for (let rr = Math.max(0, r - 1); rr <= r; rr++)
-      for (let cc = Math.max(0, c - 1); cc <= c; cc++) { sum += vec[rr * dimc + cc]; cnt++; }
+      for (let cc = Math.max(0, c - 1); cc <= c; cc++) {
+        sum += vec[rr * dimc + cc];
+        cnt++;
+      }
     return sum / cnt;
   };
   const smoothVec = (vec, dimc) => vec.map((_, i) => smoothCell(vec, dimc, Math.floor(i / dimc), i % dimc));
@@ -62,17 +70,19 @@ const ocr = () => {
     }
     return sum;
   };
-  const searchBased = (query, querySmooth, db, dimc) => DIGITS
-    .map(digit => {
+  const searchBased = (query, querySmooth, db, dimc) =>
+    DIGITS.map((digit) => {
       const best = { digit, dist: Number.MAX_SAFE_INTEGER };
-      db[digit].forEach(dbi => {
+      db[digit].forEach((dbi) => {
         if (!dbi.smooth) dbi.smooth = smoothVec(dbi.imgvec, dimc);
         const dist = distBased(dbi.imgvec, dbi.smooth, query, querySmooth, best.dist);
-        if (dist < best.dist) { best.dist = dist; best.name = dbi.name; }
+        if (dist < best.dist) {
+          best.dist = dist;
+          best.name = dbi.name;
+        }
       });
       return best;
-    })
-    .sort((a, b) => a.dist - b.dist);
+    }).sort((a, b) => a.dist - b.dist);
 
   // Statt jede Zelle strikt an derselben Position zu vergleichen, wird pro Zeile/Spalte
   // in jeder Trainingsprobe einzeln die beste Uebereinstimmung gesucht (mit Fenster) und
@@ -82,7 +92,10 @@ const ocr = () => {
     for (let r = a; r <= e; r++) {
       const rs = r * dimc;
       let drow = 0;
-      for (let c = 0; c < dimc; c++) { const d = v1[rs + c] - v2[rs + c]; drow += d * d; }
+      for (let c = 0; c < dimc; c++) {
+        const d = v1[rs + c] - v2[rs + c];
+        drow += d * d;
+      }
       sum += r === row ? 2 * drow : drow;
       if (sum >= bestDistance) return sum;
     }
@@ -92,9 +105,9 @@ const ocr = () => {
     const window = Math.max(1, Math.floor(dimr / 6));
     const starts = Array.from({ length: dimr }, (_, row) => Math.max(0, row - window));
     const ends = Array.from({ length: dimr }, (_, row) => Math.min(dimr - 1, row + window));
-    return DIGITS.map(digit => {
+    return DIGITS.map((digit) => {
       const perRow = new Array(dimr).fill(Number.MAX_SAFE_INTEGER);
-      db[digit].forEach(dbi => {
+      db[digit].forEach((dbi) => {
         for (let row = 0; row < dimr; row++) {
           const dist = distRowBand(dbi.imgvec, query, dimc, row, starts[row], ends[row], perRow[row]);
           if (dist < perRow[row]) perRow[row] = dist;
@@ -108,7 +121,11 @@ const ocr = () => {
     let sum = 0;
     for (let c = a; c <= e; c++) {
       let dcol = 0;
-      for (let r = 0; r < dimr; r++) { const n = r * dimc + c; const d = v1[n] - v2[n]; dcol += d * d; }
+      for (let r = 0; r < dimr; r++) {
+        const n = r * dimc + c;
+        const d = v1[n] - v2[n];
+        dcol += d * d;
+      }
       sum += c === col ? 2 * dcol : dcol;
       if (sum >= bestDistance) return sum;
     }
@@ -118,9 +135,9 @@ const ocr = () => {
     const window = Math.max(1, Math.floor(dimc / 4));
     const starts = Array.from({ length: dimc }, (_, col) => Math.max(0, col - window));
     const ends = Array.from({ length: dimc }, (_, col) => Math.min(dimc - 1, col));
-    return DIGITS.map(digit => {
+    return DIGITS.map((digit) => {
       const perCol = new Array(dimc).fill(Number.MAX_SAFE_INTEGER);
-      db[digit].forEach(dbi => {
+      db[digit].forEach((dbi) => {
         for (let col = 0; col < dimc; col++) {
           const dist = distColBand(dbi.imgvec, query, dimr, dimc, col, starts[col], ends[col], perCol[col]);
           if (dist < perCol[col]) perCol[col] = dist;
@@ -152,16 +169,23 @@ const ocr = () => {
     const rowEnds = Array.from({ length: dimr }, (_, row) => Math.min(dimr - 1, row + rowWindow));
     const colStarts = Array.from({ length: dimc }, (_, col) => Math.max(0, col - colWindow));
     const colEnds = Array.from({ length: dimc }, (_, col) => Math.min(dimc - 1, col + colWindow));
-    return DIGITS.map(digit => {
+    return DIGITS.map((digit) => {
       const perCell = new Array(dimr * dimc).fill(Number.MAX_SAFE_INTEGER);
-      db[digit].forEach(dbi => {
+      db[digit].forEach((dbi) => {
         for (let row = 0; row < dimr; row++) {
           for (let col = 0; col < dimc; col++) {
             const idx = row * dimc + col;
             const dist = distQuad(
-              dbi.imgvec, query, dimc,
-              rowStarts[row], rowEnds[row], colStarts[col], colEnds[col],
-              row, col, perCell[idx],
+              dbi.imgvec,
+              query,
+              dimc,
+              rowStarts[row],
+              rowEnds[row],
+              colStarts[col],
+              colEnds[col],
+              row,
+              col,
+              perCell[idx]
             );
             if (dist < perCell[idx]) perCell[idx] = dist;
           }
@@ -174,18 +198,21 @@ const ocr = () => {
   // Vorauswahl der `limit` naechsten Proben je Ziffer nach voller quadratischer Distanz.
   // Gleichstaende behalten die Reihenfolge der Datenbank; der Fruehabbruch nutzt die
   // schlechteste behaltene Distanz als Schranke.
-  const shortlist = (query, db, limit) => Object.fromEntries(DIGITS.map(digit => {
-    const best = [];
-    db[digit].forEach(sample => {
-      const threshold = best.length < limit ? Infinity : best[best.length - 1].dist;
-      const dist = distFct(query, sample.imgvec, threshold);
-      if (dist >= threshold) return;
-      const position = best.findIndex(candidate => candidate.dist > dist);
-      best.splice(position < 0 ? best.length : position, 0, { sample, dist });
-      if (best.length > limit) best.pop();
-    });
-    return [digit, best.map(({ sample }) => sample)];
-  }));
+  const shortlist = (query, db, limit) =>
+    Object.fromEntries(
+      DIGITS.map((digit) => {
+        const best = [];
+        db[digit].forEach((sample) => {
+          const threshold = best.length < limit ? Infinity : best[best.length - 1].dist;
+          const dist = distFct(query, sample.imgvec, threshold);
+          if (dist >= threshold) return;
+          const position = best.findIndex((candidate) => candidate.dist > dist);
+          best.splice(position < 0 ? best.length : position, 0, { sample, dist });
+          if (best.length > limit) best.pop();
+        });
+        return [digit, best.map(({ sample }) => sample)];
+      })
+    );
 
   // Kaskadiert ueber die verschiebungstoleranten Abstandsmasse, sobald die einfache
   // Distanz kein sicheres Ergebnis liefert. Liefert keines davon ein sicheres Ergebnis,
@@ -201,9 +228,9 @@ const ocr = () => {
     // wird - egal ob eine Sicht direkt sicher ist oder erst per vote() gewinnt - das
     // naechste benannte Trainingsbild der einfachen Distanz nachgereicht (die immer alle
     // 10 Ziffern benennt), damit der Pruefstand nie ein Bild ohne Namen anzeigen muss.
-    const namedByDigit = Object.fromEntries(sqr.map(candidate => [candidate.digit, candidate]));
-    const trySecure = candidates => {
-      const named = candidates.map(candidate => ({ ...namedByDigit[candidate.digit], ...candidate }));
+    const namedByDigit = Object.fromEntries(sqr.map((candidate) => [candidate.digit, candidate]));
+    const trySecure = (candidates) => {
+      const named = candidates.map((candidate) => ({ ...namedByDigit[candidate.digit], ...candidate }));
       attempts.push(named);
       return confidence(named) >= SECURE_CONFIDENCE ? named : undefined;
     };
@@ -215,11 +242,17 @@ const ocr = () => {
     const based = trySecure(searchBased(query, querySmooth, db, dimc));
     if (based) return { secure: based, attempts };
 
-    const localDb = seeds ? Object.fromEntries(DIGITS.map(digit => {
-      const first = seeds[digit].map(({ sample }) => sample);
-      const selected = new Set(first);
-      return [digit, [...first, ...db[digit].filter(sample => !selected.has(sample))]];
-    })) : candidateLimit ? shortlist(query, db, candidateLimit) : db;
+    const localDb = seeds
+      ? Object.fromEntries(
+          DIGITS.map((digit) => {
+            const first = seeds[digit].map(({ sample }) => sample);
+            const selected = new Set(first);
+            return [digit, [...first, ...db[digit].filter((sample) => !selected.has(sample))]];
+          })
+        )
+      : candidateLimit
+      ? shortlist(query, db, candidateLimit)
+      : db;
     const rows = trySecure(searchRows(query, localDb, dimr, dimc));
     if (rows) return { secure: rows, attempts };
 
@@ -237,10 +270,10 @@ const ocr = () => {
   // Ziffern, auf die sich mehrere Masse einigen, summieren diese Konfidenz multiplikativ.
   // Portiert aus dem Voter des alten Recm-Systems - schlaegt sowohl das einfache Verwerfen
   // unsicherer Sichten als auch das bisherige Zwei-Sichten-Blending deutlich.
-  const vote = attempts => {
-    const val = Object.fromEntries(DIGITS.map(digit => [digit, 1]));
+  const vote = (attempts) => {
+    const val = Object.fromEntries(DIGITS.map((digit) => [digit, 1]));
     const bestCandidate = {};
-    attempts.forEach(candidates => {
+    attempts.forEach((candidates) => {
       const top = candidates[0];
       if (!top) return;
       val[top.digit] *= confidence(candidates) || 1;
@@ -248,10 +281,13 @@ const ocr = () => {
     });
     // Digits, die bei keinem Mass Platz 1 belegen, haben keinen bestCandidate-Eintrag;
     // attempts[0] (die einfache Distanz) nennt aber immer alle 10 Ziffern.
-    const namedByDigit = Object.fromEntries(attempts[0].map(candidate => [candidate.digit, candidate]));
-    return DIGITS
-      .map(digit => ({ ...namedByDigit[digit], ...bestCandidate[digit], digit, dist: 1 / val[digit] }))
-      .sort((a, b) => a.dist - b.dist);
+    const namedByDigit = Object.fromEntries(attempts[0].map((candidate) => [candidate.digit, candidate]));
+    return DIGITS.map((digit) => ({
+      ...namedByDigit[digit],
+      ...bestCandidate[digit],
+      digit,
+      dist: 1 / val[digit],
+    })).sort((a, b) => a.dist - b.dist);
   };
 
   const png = (pngfile) => PNG.sync.read(fs.readFileSync(pngfile));
@@ -265,7 +301,7 @@ const ocr = () => {
     const base = img().frompng(png(pngfile)).adjustBW().despeckle();
     const primaryGlyph = base.clone().extractGlyphFarFromBiggest(15).cropGlyph();
     const cache = new Map();
-    return db => {
+    return (db) => {
       const primaryVector = primaryGlyph.scaleDown(db.dimr, db.dimc).imgdata;
       const primary = searchSecure(primaryVector, db, candidateLimit, priorityCount);
       if (primary.secure) return primary.secure.slice(0, 3);
@@ -284,7 +320,7 @@ const ocr = () => {
       return vote([...primary.attempts, ...cleaned.attempts]).slice(0, 3);
     };
   };
-  const recImage = (pngfile, dbs) => dbs.length ? dbs.map(createRecognizer(pngfile)) : [];
+  const recImage = (pngfile, dbs) => (dbs.length ? dbs.map(createRecognizer(pngfile)) : []);
   const recognizeImage = (pngfile, dbs) => recImage(pngfile, dbs).sort((a, b) => confidence(b) - confidence(a))[0];
 
   return {
@@ -294,7 +330,7 @@ const ocr = () => {
     recognizeImage,
     vote,
   };
-}
+};
 
 if (typeof module === 'object' && typeof module.exports === 'object') {
   module.exports = ocr;

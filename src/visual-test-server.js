@@ -93,7 +93,7 @@ const gridToPngBuffer = (imgdata, dimr, dimc) => {
       const value = 255 - Math.round((imgdata[r * dimc + c] / 100) * 255);
       for (let y = 0; y < CELL_SIZE; y++) {
         for (let x = 0; x < CELL_SIZE; x++) {
-          const offset = (((r * CELL_SIZE + y) * png.width + (c * CELL_SIZE + x)) * 4);
+          const offset = ((r * CELL_SIZE + y) * png.width + (c * CELL_SIZE + x)) * 4;
           png.data[offset] = value;
           png.data[offset + 1] = value;
           png.data[offset + 2] = value;
@@ -169,7 +169,9 @@ const ensurePool = () => {
       // Abgestuerzten Worker aussortieren, sonst bekaeme er weiter Chunks zugeteilt.
       // Stirbt der letzte, legt ensurePool() beim naechsten Request einen neuen Pool an.
       poolWorkers.splice(poolWorkers.indexOf(entry), 1);
-      [...pendingChunks].forEach(([id, pending]) => pending.entry === entry && settle(entry, id, (p) => p.reject(error)));
+      [...pendingChunks].forEach(
+        ([id, pending]) => pending.entry === entry && settle(entry, id, (p) => p.reject(error))
+      );
     });
     poolWorkers.push(entry);
   }
@@ -190,7 +192,15 @@ const stopWorkers = () => {
   return Promise.all(poolWorkers.splice(0).map(({ worker }) => worker.terminate()));
 };
 
-const runAnalysis = async ({ dataset, limit, offset, mode = 'auto', searchMode = 'optimized', secureThreshold = 2.4, testSet = 'standard' }) => {
+const runAnalysis = async ({
+  dataset,
+  limit,
+  offset,
+  mode = 'auto',
+  searchMode = 'optimized',
+  secureThreshold = 2.4,
+  testSet = 'standard',
+}) => {
   validate({ dataset, mode });
   recognitionOptionsFor(dataset, searchMode);
   const tasks = listTasks({ dataset, limit, offset, testSet }).map((task, index) => ({ ...task, index }));
@@ -211,7 +221,15 @@ const runAnalysis = async ({ dataset, limit, offset, mode = 'auto', searchMode =
   return { durationMs: Date.now() - startedAt, results, total: results.length };
 };
 
-const traceAnalysis = ({ dataset, digit, filename, mode = 'auto', searchMode = 'optimized', secureThreshold = 2.4, testSet = 'standard' }) => {
+const traceAnalysis = ({
+  dataset,
+  digit,
+  filename,
+  mode = 'auto',
+  searchMode = 'optimized',
+  secureThreshold = 2.4,
+  testSet = 'standard',
+}) => {
   validate({ dataset, mode });
   if (!Number.isInteger(digit) || digit < 0 || digit > 9) throw new Error('Ungueltige Ziffer');
   const file = safeFile(path.join(testDirectory(dataset, testSet), `img${digit}`), path.basename(filename || ''));
@@ -231,7 +249,7 @@ const planAnalysis = ({ dataset, limit, offset, testSet = 'standard' }) => (
   validate({ dataset, mode: 'auto' }), { total: listTasks({ dataset, limit, offset, testSet }).length }
 );
 
-const serveImage =(response, pathname) => {
+const serveImage = (response, pathname) => {
   const queryMatch = pathname.match(/^\/image\/query\/([^/]+)\/(test|train)\/(eb|mnist)\/(\d)\/(.+)$/);
   if (queryMatch) {
     const [, dimension, type, dataset, digit, encodedName] = queryMatch;
@@ -278,7 +296,7 @@ const handleRequest = (request, response) => {
     const searchMode = url.searchParams.get('search') || 'optimized';
     const requestedThreshold = Number(url.searchParams.get('threshold'));
     const secureThreshold = Number.isFinite(requestedThreshold) ? Math.min(Math.max(requestedThreshold, 1), 100) : 2.4;
-      runAnalysis({ dataset, limit, offset, mode, searchMode, secureThreshold, testSet })
+    runAnalysis({ dataset, limit, offset, mode, searchMode, secureThreshold, testSet })
       .then((payload) => json(response, 200, payload))
       .catch((error) => json(response, 500, { error: error.message }));
     return;
@@ -289,15 +307,19 @@ const handleRequest = (request, response) => {
     const requestedThreshold = Number(url.searchParams.get('threshold'));
     const secureThreshold = Number.isFinite(requestedThreshold) ? Math.min(Math.max(requestedThreshold, 1), 100) : 2.4;
     try {
-      json(response, 200, traceAnalysis({
-        dataset,
-        digit: Number(url.searchParams.get('digit')),
-        filename: url.searchParams.get('file'),
-        mode,
-        searchMode,
-        testSet,
-        secureThreshold,
-      }));
+      json(
+        response,
+        200,
+        traceAnalysis({
+          dataset,
+          digit: Number(url.searchParams.get('digit')),
+          filename: url.searchParams.get('file'),
+          mode,
+          searchMode,
+          testSet,
+          secureThreshold,
+        })
+      );
     } catch (error) {
       json(response, 500, { error: error.message });
     }

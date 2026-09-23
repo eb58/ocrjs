@@ -2,7 +2,14 @@ const http = require('http');
 const path = require('path');
 const { PNG } = require('pngjs');
 const { analyzeImage, listTasks, loadDatabases, recognitionOptionsFor } = require('../src/analysis');
-const { createServer, normalizePng, planAnalysis, runAnalysis, stopWorkers, traceAnalysis } = require('../src/visual-test-server');
+const {
+  createServer,
+  normalizePng,
+  planAnalysis,
+  runAnalysis,
+  stopWorkers,
+  traceAnalysis,
+} = require('../src/visual-test-server');
 
 afterAll(() => stopWorkers());
 
@@ -21,13 +28,25 @@ const buildPng = ({ width, height, background, foreground, foregroundPixels }) =
 const cornerPixel = (buffer) => PNG.sync.read(buffer).data[0];
 
 test('normalizePng leaves an already white-background image unchanged in polarity', () => {
-  const buffer = buildPng({ width: 4, height: 4, background: 255, foreground: 0, foregroundPixels: new Set([5, 6, 9, 10]) });
+  const buffer = buildPng({
+    width: 4,
+    height: 4,
+    background: 255,
+    foreground: 0,
+    foregroundPixels: new Set([5, 6, 9, 10]),
+  });
 
   expect(cornerPixel(normalizePng(buffer))).toBe(255);
 });
 
 test('normalizePng inverts a black-background training image to a white background', () => {
-  const buffer = buildPng({ width: 4, height: 4, background: 0, foreground: 255, foregroundPixels: new Set([5, 6, 9, 10]) });
+  const buffer = buildPng({
+    width: 4,
+    height: 4,
+    background: 0,
+    foreground: 255,
+    foregroundPixels: new Set([5, 6, 9, 10]),
+  });
 
   expect(cornerPixel(normalizePng(buffer))).toBe(255);
 });
@@ -38,7 +57,14 @@ describe('runAnalysis via worker pool', () => {
   test('matches a sequential run exactly, including order', async () => {
     const databases = loadDatabases(params.dataset, params.mode);
     const expected = listTasks(params).map(({ file, expected: digit }) =>
-      analyzeImage(file, digit, params.dataset, databases, params.secureThreshold, recognitionOptionsFor(params.dataset))
+      analyzeImage(
+        file,
+        digit,
+        params.dataset,
+        databases,
+        params.secureThreshold,
+        recognitionOptionsFor(params.dataset)
+      )
     );
 
     const actual = await runAnalysis(params);
@@ -111,8 +137,7 @@ describe('traceAnalysis', () => {
   });
 
   test('does not allow tracing a file outside the selected test directory', () => {
-    expect(() => traceAnalysis({ dataset: 'eb', digit, filename: '../secret.png' }))
-      .toThrow('Testbild nicht gefunden');
+    expect(() => traceAnalysis({ dataset: 'eb', digit, filename: '../secret.png' })).toThrow('Testbild nicht gefunden');
   });
 });
 

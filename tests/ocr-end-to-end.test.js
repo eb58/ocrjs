@@ -10,10 +10,11 @@ const fixtures = fs
   .filter((name) => name.endsWith('.png'))
   .map((name) => [name, Number(name.match(/^digit-(\d)/)[1])]);
 
-test.each(fixtures)('priority ordering preserves every candidate field for %s', filename => {
+test.each(fixtures)('priority ordering preserves every candidate field for %s', (filename) => {
   const file = path.join(fixtureDir, filename);
-  expect(ocrengine.createRecognizer(file, { priorityCount: 32 })(database))
-    .toEqual(ocrengine.createRecognizer(file)(database));
+  expect(ocrengine.createRecognizer(file, { priorityCount: 32 })(database)).toEqual(
+    ocrengine.createRecognizer(file)(database)
+  );
 });
 
 test('a shortlist covering the database preserves the full fallback result', () => {

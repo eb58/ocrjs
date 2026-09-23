@@ -37,12 +37,13 @@ const testDirectory = (dataset, testSet = 'standard') => {
 const imageUrl = (type, dataset, digit, name) => `/image/${type}/${dataset}/${digit}/${encodeURIComponent(name)}`;
 const queryImageUrl = (dimension, type, dataset, digit, name) =>
   `/image/query/${dimension}/${type}/${dataset}/${digit}/${encodeURIComponent(name)}`;
-const candidateResults = (candidates, dataset) => candidates.map((candidate) => ({
-  digit: candidate.digit,
-  distance: candidate.dist,
-  image: candidate.name ? imageUrl('train', dataset, candidate.digit, candidate.name) : null,
-  name: candidate.name,
-}));
+const candidateResults = (candidates, dataset) =>
+  candidates.map((candidate) => ({
+    digit: candidate.digit,
+    distance: candidate.dist,
+    image: candidate.name ? imageUrl('train', dataset, candidate.digit, candidate.name) : null,
+    name: candidate.name,
+  }));
 
 // Je groeber das Raster, desto eher wirkt ein Treffer zufaellig "sicher": mit wenigen
 // Zellen gibt es weniger Moeglichkeiten, sich von einer anderen Ziffer zu unterscheiden,
@@ -50,7 +51,8 @@ const candidateResults = (candidates, dataset) => candidates.map((candidate) => 
 // feinen Raster echte Aehnlichkeit bedeuten wuerde. Die Schwelle wird deshalb relativ zur
 // Zellenzahl der feinsten Dimension hochskaliert, statt ueberall gleich streng zu sein.
 const finestCellCount = Math.max(...dimensions.map((dim) => dim.split('x').reduce((a, b) => a * Number(b), 1)));
-const secureThresholdFor = (dimr, dimc, secureThreshold) => secureThreshold * Math.sqrt(finestCellCount / (dimr * dimc));
+const secureThresholdFor = (dimr, dimc, secureThreshold) =>
+  secureThreshold * Math.sqrt(finestCellCount / (dimr * dimc));
 
 const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4, options = {}, trace) => {
   const recognize = ocrengine.createRecognizer(file, options);
@@ -62,16 +64,17 @@ const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4,
     const candidateConfidence = confidence(candidates);
     const threshold = secureThresholdFor(data.dimr, data.dimc, secureThreshold);
     attempts.push(candidates);
-    if (trace) trace.push({
-      accepted: candidateConfidence >= threshold,
-      candidates: candidateResults(candidates.slice(0, 3), dataset),
-      confidence: candidateConfidence,
-      dimension,
-      queryImage: queryImageUrl(dimension, 'test', dataset, expected, filename),
-      search: options.candidateLimit ? 'optimized' : 'full',
-      threshold,
-      type: 'dimension',
-    });
+    if (trace)
+      trace.push({
+        accepted: candidateConfidence >= threshold,
+        candidates: candidateResults(candidates.slice(0, 3), dataset),
+        confidence: candidateConfidence,
+        dimension,
+        queryImage: queryImageUrl(dimension, 'test', dataset, expected, filename),
+        search: options.candidateLimit ? 'optimized' : 'full',
+        threshold,
+        type: 'dimension',
+      });
     if (candidateConfidence >= threshold) {
       secure = { candidates, dimension };
       break;
@@ -84,7 +87,11 @@ const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4,
     candidates: vote(attempts).slice(0, 3),
     dimension: databases[databases.length - 1].dimension,
   };
-  if (options.candidateLimit && options.fallbackConfidence && confidence(best.candidates) < options.fallbackConfidence) {
+  if (
+    options.candidateLimit &&
+    options.fallbackConfidence &&
+    confidence(best.candidates) < options.fallbackConfidence
+  ) {
     if (trace) trace.push({ type: 'fallback', threshold: options.fallbackConfidence });
     return analyzeImage(file, expected, dataset, databases, secureThreshold, {}, trace);
   }
@@ -103,18 +110,19 @@ const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4,
     prediction,
   };
   if (!secure && attempts.length > 1) {
-    if (trace) trace.push({
-      candidates,
-      confidence: result.confidence,
-      dimension: result.dimension,
-      prediction,
-      votes: attempts.map((attempt, index) => ({
-        confidence: confidence(attempt),
-        digit: attempt[0] && attempt[0].digit,
-        dimension: databases[index] && databases[index].dimension,
-      })),
-      type: 'vote',
-    });
+    if (trace)
+      trace.push({
+        candidates,
+        confidence: result.confidence,
+        dimension: result.dimension,
+        prediction,
+        votes: attempts.map((attempt, index) => ({
+          confidence: confidence(attempt),
+          digit: attempt[0] && attempt[0].digit,
+          dimension: databases[index] && databases[index].dimension,
+        })),
+        type: 'vote',
+      });
   }
   return result;
 };

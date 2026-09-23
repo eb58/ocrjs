@@ -13,7 +13,14 @@ parentPort.on('message', ({ id, tasks, dataset, mode, searchMode, secureThreshol
     const databases = databasesFor(dataset, mode);
     const results = tasks.map(({ file, expected, index }) => ({
       index,
-      result: analyzeImage(file, expected, dataset, databases, secureThreshold, recognitionOptionsFor(dataset, searchMode)),
+      result: analyzeImage(
+        file,
+        expected,
+        dataset,
+        databases,
+        secureThreshold,
+        recognitionOptionsFor(dataset, searchMode)
+      ),
     }));
     parentPort.postMessage({ id, results });
   } catch (error) {
