@@ -119,10 +119,11 @@ const resetSettings = () => {
   renderCards();
 };
 
+// Die zusaetzlichen Testmengen gibt es nur fuer EB.
 const syncTestSets = () => {
-  const newSet = elements.testSet.querySelector('option[value="2026-09-21"]');
-  newSet.hidden = elements.dataset.value !== 'eb';
-  if (newSet.hidden && elements.testSet.value === '2026-09-21') elements.testSet.value = 'standard';
+  const ebOnly = elements.dataset.value !== 'eb';
+  elements.testSet.querySelectorAll('option:not([value="standard"])').forEach((option) => (option.hidden = ebOnly));
+  if (ebOnly) elements.testSet.value = 'standard';
 };
 
 restoreSettings();

@@ -232,6 +232,25 @@ describe('/image/query - das tatsaechlich verglichene Raster', () => {
 
     expect(res.status).toBe(404);
   });
+
+  test.each(['2026-09-21', 'review'])('serves images of the additional EB test set %s', async (testSet) => {
+    const [task] = listTasks({ dataset: 'eb', testSet, limit: 1, offset: 0 });
+    const result = analyzeImage(task.file, task.expected, 'eb', loadDatabases('eb', '6x4'));
+    const group = path.basename(path.dirname(path.dirname(task.file)));
+
+    expect(result.image).toBe(`/image/${group}/eb/${task.expected}/${encodeURIComponent(path.basename(task.file))}`);
+    for (const url of [result.image, result.queryImage]) {
+      const res = await requestBody(url);
+      expect(res.status).toBe(200);
+      expect(res.headers['content-type']).toBe('image/png');
+    }
+  });
+
+  test('refuses image folders that are neither training data nor a registered test set', async () => {
+    const res = await requestBody(`/image/dbs/eb/${digit}/${encodeURIComponent(filename)}`);
+
+    expect(res.status).toBe(404);
+  });
 });
 
 describe('requestParams', () => {

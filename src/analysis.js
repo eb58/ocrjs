@@ -6,7 +6,7 @@ const { SECURE_CONFIDENCE, confidence, vote } = ocrengine;
 const dataPath = path.join(path.resolve(__dirname, '..'), 'data');
 const datasets = new Set(['eb', 'mnist']);
 const testSets = {
-  eb: { standard: 'test', '2026-09-21': 'test-2026-09-21' },
+  eb: { standard: 'test', '2026-09-21': 'test-2026-09-21', review: 'review' },
   mnist: { standard: 'test' },
 };
 const dimensions = ['6x4', '7x5', '8x6'];
@@ -58,6 +58,8 @@ const analyzeImage = (file, expected, dataset, databases, secureThreshold = SECU
   const recognize = ocrengine.createRecognizer(file, options);
   const attempts = [];
   const filename = path.basename(file);
+  // Ordner der Testmenge (test, test-2026-09-21, review), damit der Server das Bild findet.
+  const group = path.basename(path.dirname(path.dirname(file)));
   let secure;
   for (const { dimension, data } of databases) {
     const candidates = recognize(data);
@@ -70,7 +72,7 @@ const analyzeImage = (file, expected, dataset, databases, secureThreshold = SECU
         candidates: candidateResults(candidates.slice(0, 3), dataset),
         confidence: candidateConfidence,
         dimension,
-        queryImage: queryImageUrl(dimension, 'test', dataset, expected, filename),
+        queryImage: queryImageUrl(dimension, group, dataset, expected, filename),
         search: options.candidateLimit ? 'optimized' : 'full',
         threshold,
         type: 'dimension',
@@ -105,8 +107,8 @@ const analyzeImage = (file, expected, dataset, databases, secureThreshold = SECU
     dimension: best.dimension,
     expected,
     filename,
-    image: imageUrl('test', dataset, expected, filename),
-    queryImage: queryImageUrl(best.dimension, 'test', dataset, expected, filename),
+    image: imageUrl(group, dataset, expected, filename),
+    queryImage: queryImageUrl(best.dimension, group, dataset, expected, filename),
     prediction,
   };
   if (!secure && attempts.length > 1) {

@@ -15,6 +15,7 @@ const {
   loadDatabases,
   recognitionOptionsFor,
   testDirectory,
+  testSets,
   traceImage,
   validate,
 } = require('./analysis');
@@ -251,21 +252,24 @@ const planAnalysis = ({ dataset, limit, offset, testSet = 'standard' }) => (
   { total: listTasks({ dataset, limit, offset, testSet }).length }
 );
 
+// Bildordner, aus denen ausgeliefert werden darf: Training und die eingetragenen Testmengen.
+const imageGroups = (dataset) => new Set(['train', ...Object.values(testSets[dataset])]);
+
 const serveImage = (response, pathname) => {
-  const queryMatch = pathname.match(/^\/image\/query\/([^/]+)\/(test|train)\/(eb|mnist)\/(\d)\/(.+)$/);
+  const queryMatch = pathname.match(/^\/image\/query\/([^/]+)\/([\w-]+)\/(eb|mnist)\/(\d)\/(.+)$/);
   if (queryMatch) {
-    const [, dimension, type, dataset, digit, encodedName] = queryMatch;
+    const [, dimension, group, dataset, digit, encodedName] = queryMatch;
+    if (!imageGroups(dataset).has(group)) return sendFile(response);
     const file = safeFile(
-      path.join(dataPath, 'imgs', dataset, type, `img${digit}`),
+      path.join(dataPath, 'imgs', dataset, group, `img${digit}`),
       path.basename(decodeURIComponent(encodedName)),
     );
     sendQueryGrid(response, file, dimension);
     return;
   }
-  const match = pathname.match(/^\/image\/(test|train)\/(eb|mnist)\/(\d)\/(.+)$/);
-  if (!match) return sendFile(response);
-  const [, type, dataset, digit, encodedName] = match;
-  const group = type === 'test' ? 'test' : 'train';
+  const match = pathname.match(/^\/image\/([\w-]+)\/(eb|mnist)\/(\d)\/(.+)$/);
+  if (!match || !imageGroups(match[2]).has(match[1])) return sendFile(response);
+  const [, group, dataset, digit, encodedName] = match;
   const file = safeFile(
     path.join(dataPath, 'imgs', dataset, group, `img${digit}`),
     path.basename(decodeURIComponent(encodedName)),
