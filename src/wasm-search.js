@@ -48,7 +48,11 @@ const upload = (samples, n) => {
     const view = i32(entry.ptr, n * samples.length);
     samples.forEach((sample, index) => {
       view.set(sample.imgvec, index * n);
-      if (!positions.has(sample)) positions.set(sample, { entry, index });
+      // Jedes Bild verweist auf den groessten Block, der es enthaelt: wurde zuerst nur ein Teil
+      // (etwa die ersten Bilder einer Ziffer) hochgeladen, liefen spaetere gemischte Teilmengen
+      // sonst ueber zwei Bloecke und muessten jedes Mal neu kopiert werden.
+      const known = positions.get(sample);
+      if (!known || known.entry.count < entry.count) positions.set(sample, { entry, index });
     });
     i32((entry.identity = alloc(4 * entry.count)), entry.count).set(Int32Array.from(samples.keys()));
   }
