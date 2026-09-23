@@ -6,7 +6,17 @@ const { URL } = require('url');
 const { Worker } = require('worker_threads');
 const { PNG } = require('pngjs');
 const img = require('./img');
-const { analyzeImage, dataPath, dimensions, listTasks, recognitionOptionsFor, validate } = require('./analysis');
+const {
+  analyzeImage,
+  dataPath,
+  dimensions,
+  listTasks,
+  loadDatabases,
+  recognitionOptionsFor,
+  testDirectory,
+  traceImage,
+  validate,
+} = require('./analysis');
 
 const projectPath = path.resolve(__dirname, '..');
 const publicPath = path.join(projectPath, 'visual-tests');
@@ -180,10 +190,10 @@ const stopWorkers = () => {
   return Promise.all(poolWorkers.splice(0).map(({ worker }) => worker.terminate()));
 };
 
-const runAnalysis = async ({ dataset, limit, offset, mode = 'auto', searchMode = 'optimized', secureThreshold = 2.4 }) => {
+const runAnalysis = async ({ dataset, limit, offset, mode = 'auto', searchMode = 'optimized', secureThreshold = 2.4, testSet = 'standard' }) => {
   validate({ dataset, mode });
   recognitionOptionsFor(dataset, searchMode);
-  const tasks = listTasks({ dataset, limit, offset }).map((task, index) => ({ ...task, index }));
+  const tasks = listTasks({ dataset, limit, offset, testSet }).map((task, index) => ({ ...task, index }));
   if (!tasks.length) return { durationMs: 0, results: [], total: 0 };
 
   const startedAt = Date.now();
@@ -201,9 +211,24 @@ const runAnalysis = async ({ dataset, limit, offset, mode = 'auto', searchMode =
   return { durationMs: Date.now() - startedAt, results, total: results.length };
 };
 
+const traceAnalysis = ({ dataset, digit, filename, mode = 'auto', searchMode = 'optimized', secureThreshold = 2.4, testSet = 'standard' }) => {
+  validate({ dataset, mode });
+  if (!Number.isInteger(digit) || digit < 0 || digit > 9) throw new Error('Ungueltige Ziffer');
+  const file = safeFile(path.join(testDirectory(dataset, testSet), `img${digit}`), path.basename(filename || ''));
+  if (!file || !fs.existsSync(file)) throw new Error('Testbild nicht gefunden');
+  return traceImage(
+    file,
+    digit,
+    dataset,
+    loadDatabases(dataset, mode),
+    secureThreshold,
+    recognitionOptionsFor(dataset, searchMode)
+  );
+};
+
 // Liefert vorab die Gesamtzahl, damit der Client trotz Batches einen Fortschritt anzeigen kann.
-const planAnalysis = ({ dataset, limit, offset }) => (
-  validate({ dataset, mode: 'auto' }), { total: listTasks({ dataset, limit, offset }).length }
+const planAnalysis = ({ dataset, limit, offset, testSet = 'standard' }) => (
+  validate({ dataset, mode: 'auto' }), { total: listTasks({ dataset, limit, offset, testSet }).length }
 );
 
 const serveImage =(response, pathname) => {
@@ -236,12 +261,13 @@ const handleRequest = (request, response) => {
   }
   const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
   const dataset = url.searchParams.get('dataset') || 'eb';
+  const testSet = url.searchParams.get('testSet') || 'standard';
   const requestedLimit = Number(url.searchParams.get('limit'));
   const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 0), 5000) : 20;
   const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
   if (url.pathname === '/api/plan') {
     try {
-      json(response, 200, planAnalysis({ dataset, limit, offset }));
+      json(response, 200, planAnalysis({ dataset, limit, offset, testSet }));
     } catch (error) {
       json(response, 500, { error: error.message });
     }
@@ -252,9 +278,29 @@ const handleRequest = (request, response) => {
     const searchMode = url.searchParams.get('search') || 'optimized';
     const requestedThreshold = Number(url.searchParams.get('threshold'));
     const secureThreshold = Number.isFinite(requestedThreshold) ? Math.min(Math.max(requestedThreshold, 1), 100) : 2.4;
-    runAnalysis({ dataset, limit, offset, mode, searchMode, secureThreshold })
+      runAnalysis({ dataset, limit, offset, mode, searchMode, secureThreshold, testSet })
       .then((payload) => json(response, 200, payload))
       .catch((error) => json(response, 500, { error: error.message }));
+    return;
+  }
+  if (url.pathname === '/api/trace') {
+    const mode = url.searchParams.get('mode') || 'auto';
+    const searchMode = url.searchParams.get('search') || 'optimized';
+    const requestedThreshold = Number(url.searchParams.get('threshold'));
+    const secureThreshold = Number.isFinite(requestedThreshold) ? Math.min(Math.max(requestedThreshold, 1), 100) : 2.4;
+    try {
+      json(response, 200, traceAnalysis({
+        dataset,
+        digit: Number(url.searchParams.get('digit')),
+        filename: url.searchParams.get('file'),
+        mode,
+        searchMode,
+        testSet,
+        secureThreshold,
+      }));
+    } catch (error) {
+      json(response, 500, { error: error.message });
+    }
     return;
   }
   if (url.pathname.startsWith('/image/')) {
@@ -271,4 +317,4 @@ if (require.main === module) {
   createServer().listen(port, () => console.log(`OCR-Prüfstand: http://localhost:${port}`));
 }
 
-module.exports = { analyzeImage, createServer, normalizePng, planAnalysis, runAnalysis, stopWorkers };
+module.exports = { analyzeImage, createServer, normalizePng, planAnalysis, runAnalysis, stopWorkers, traceAnalysis };

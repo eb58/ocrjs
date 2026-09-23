@@ -25,6 +25,10 @@ npm run gen-dbs                 # liest Trainingsbilder aus data/imgs/{eb,mnist}
 
 `gen-images-from-mnist` und `gen-dbs` sind nicht automatisch verbunden: Die erzeugten MNIST-PNGs müssen von `os.tmpdir()/ocrjs/<train|test>` manuell nach `data/imgs/mnist/<train|test>` kopiert werden, bevor `gen-dbs` sie einliest.
 
+Im Prüfstand lässt sich neben dem EB-Bestand auch die am 21.09.2026
+hinzugekommene EB-Testmenge auswählen. Sie liegt getrennt unter
+`data/imgs/eb/test-2026-09-21`.
+
 ## Hilfsskripte
 
 Eine Einordnung der Generatoren, Importwerkzeuge und historischen Benchmarks

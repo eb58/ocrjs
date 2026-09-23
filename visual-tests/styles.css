@@ -493,6 +493,126 @@ dialog::backdrop {
   font: 0.72rem/1.5 monospace;
   overflow-wrap: anywhere;
 }
+.detail-actions {
+  padding: 18px 24px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+.animate-button {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.recognition-animation {
+  margin: 18px 24px 6px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: #0c1015;
+}
+.trace-progress {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.trace-progress i {
+  height: 3px;
+  flex: 1;
+  background: var(--line);
+  transition: background 180ms ease;
+}
+.trace-progress i.active {
+  background: var(--accent);
+}
+.trace-stage {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 22px;
+  align-items: center;
+  animation: trace-in 260ms ease-out;
+}
+.trace-stage figure {
+  min-height: 130px;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  background: white;
+}
+.trace-stage img {
+  max-width: 110px;
+  max-height: 100px;
+  image-rendering: pixelated;
+}
+.trace-stage figcaption {
+  color: #596273;
+  font: 700 0.62rem monospace;
+  text-transform: uppercase;
+}
+.trace-explanation h3 {
+  margin: 0 0 8px;
+  color: var(--accent);
+}
+.trace-explanation p,
+.trace-loading {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.trace-candidates {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.trace-candidates .candidate {
+  grid-template-columns: 48px 1fr;
+  padding: 8px;
+}
+.trace-candidates .candidate img {
+  width: 48px;
+  height: 48px;
+}
+.trace-candidates .candidate strong {
+  font-size: 1.2rem;
+}
+.trace-fallback-icon {
+  margin-top: 14px;
+  padding: 14px;
+  color: var(--accent);
+  border: 1px dashed var(--accent);
+  font: 700 1rem monospace;
+  text-align: center;
+}
+.trace-votes {
+  margin-top: 14px;
+  display: grid;
+  gap: 7px;
+}
+.trace-votes > strong {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.trace-votes span {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  font-family: monospace;
+}
+.trace-votes span b:first-child {
+  color: var(--accent);
+}
+.trace-votes span small {
+  color: var(--muted);
+}
+@keyframes trace-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 #detailContent > h3 {
   margin: 24px 24px 12px;
   font-size: 0.85rem;
@@ -600,6 +720,12 @@ dialog::backdrop {
     min-height: 210px;
   }
   .candidates {
+    grid-template-columns: 1fr;
+  }
+  .trace-stage {
+    grid-template-columns: 1fr;
+  }
+  .trace-candidates {
     grid-template-columns: 1fr;
   }
 }

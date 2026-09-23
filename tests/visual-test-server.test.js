@@ -2,7 +2,7 @@ const http = require('http');
 const path = require('path');
 const { PNG } = require('pngjs');
 const { analyzeImage, listTasks, loadDatabases, recognitionOptionsFor } = require('../src/analysis');
-const { createServer, normalizePng, planAnalysis, runAnalysis, stopWorkers } = require('../src/visual-test-server');
+const { createServer, normalizePng, planAnalysis, runAnalysis, stopWorkers, traceAnalysis } = require('../src/visual-test-server');
 
 afterAll(() => stopWorkers());
 
@@ -82,6 +82,37 @@ describe('planAnalysis', () => {
 
   test('rejects an unknown dataset', () => {
     expect(() => planAnalysis({ dataset: 'unbekannt', limit: 2, offset: 0 })).toThrow('Unbekannter Datensatz');
+  });
+
+  test('plans the separately selectable EB test set', () => {
+    expect(planAnalysis({ dataset: 'eb', testSet: '2026-09-21', limit: 1, offset: 0 })).toEqual({
+      total: listTasks({ dataset: 'eb', testSet: '2026-09-21', limit: 1, offset: 0 }).length,
+    });
+  });
+});
+
+describe('traceAnalysis', () => {
+  const [{ file }] = listTasks({ dataset: 'eb', limit: 1, offset: 0 });
+  const digit = Number(path.basename(path.dirname(file)).replace('img', ''));
+
+  test('describes the same recognition result step by step', () => {
+    const trace = traceAnalysis({
+      dataset: 'eb',
+      digit,
+      filename: path.basename(file),
+      mode: '6x4',
+      searchMode: 'full',
+      secureThreshold: 2.4,
+    });
+
+    expect(trace.steps[0]).toMatchObject({ dimension: '6x4', search: 'full', type: 'dimension' });
+    expect(trace.steps[0].candidates).toHaveLength(3);
+    expect(trace.result.filename).toBe(path.basename(file));
+  });
+
+  test('does not allow tracing a file outside the selected test directory', () => {
+    expect(() => traceAnalysis({ dataset: 'eb', digit, filename: '../secret.png' }))
+      .toThrow('Testbild nicht gefunden');
   });
 });
 

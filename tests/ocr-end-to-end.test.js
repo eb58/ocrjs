@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const ocrengine = require('../src/ocr')();
-const { analyzeImage, loadDatabases } = require('../src/analysis');
+const { analyzeImage, loadDatabases, recognitionOptionsFor } = require('../src/analysis');
 
 const fixtureDir = path.join(__dirname, 'fixtures');
 const database = require('../data/dbs/eb-db-train-7x5');
@@ -32,6 +32,27 @@ test('an uncertain shortlist result can fall back to the full search', () => {
     fallbackConfidence: Infinity,
   });
   expect(fallback).toEqual(full);
+});
+
+test('does not create an undefined image URL for an unnamed candidate', () => {
+  const file = path.join(fixtureDir, 'digit-5-a.png');
+  const databases = loadDatabases('eb', 'auto').map(({ dimension, data }) => ({
+    dimension,
+    data: { ...data, 0: [] },
+  }));
+  const result = analyzeImage(file, 5, 'eb', databases);
+  const unnamed = result.candidates.filter((candidate) => !candidate.name);
+
+  expect(unnamed.length).toBeGreaterThan(0);
+  unnamed.forEach((candidate) => expect(candidate.image).toBeNull());
+});
+
+test('falls back to the complete EB search when raster votes remain ambiguous', () => {
+  const filename = '0_1_1__aliste_TestListenH_Neu_rechserv_region1_17_23_056_6_3042876h_1.png';
+  const file = path.join(__dirname, '../data/imgs/eb/test/img9', filename);
+  const result = analyzeImage(file, 9, 'eb', loadDatabases('eb', 'auto'), 2.4, recognitionOptionsFor('eb'));
+
+  expect(result.prediction).toBe(9);
 });
 
 test.each(fixtures)('recognizes %s through the complete PNG pipeline', (filename, expected) => {

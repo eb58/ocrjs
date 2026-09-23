@@ -2,6 +2,7 @@ const PAGE_SIZE = 200;
 const SETTINGS_KEY = 'ocrjs.visual-test.settings.v1';
 const DEFAULT_SETTINGS = {
   dataset: 'eb',
+  testSet: 'standard',
   digit: 'all',
   limit: '20',
   mode: 'auto',
@@ -10,11 +11,20 @@ const DEFAULT_SETTINGS = {
   sort: 'confidence',
   threshold: '2.4',
 };
-const state = { durationMs: 0, results: [], status: 'all', visible: PAGE_SIZE };
+const state = { durationMs: 0, results: [], runConfig: null, status: 'all', traceTimer: null, visible: PAGE_SIZE };
+const MISSING_TRAINING_IMAGE = `data:image/svg+xml,${encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150">
+    <rect width="150" height="150" fill="#20262f"/>
+    <path d="M48 61h54v42H48z M55 54h20l7 7" fill="none" stroke="#7f8998" stroke-width="5"/>
+    <path d="m59 91 13-14 10 10 8-8 12 12" fill="none" stroke="#7f8998" stroke-width="5"/>
+    <text x="75" y="124" fill="#aab2bf" font-family="sans-serif" font-size="11" text-anchor="middle">Kein Trainingsbild</text>
+  </svg>
+`)}`;
 const $ = (selector) => document.querySelector(selector);
 const elements = {
   accuracy: $('#accuracy'),
   dataset: $('#dataset'),
+  testSet: $('#testSet'),
   details: $('#details'),
   detailContent: $('#detailContent'),
   duration: $('#duration'),
@@ -61,7 +71,7 @@ const restoreControl = (element, value) => {
 
 const restoreSettings = () => {
   const settings = storedSettings();
-  ['dataset', 'mode', 'searchMode', 'limit', 'offset', 'threshold', 'digit', 'sort'].forEach((name) =>
+  ['dataset', 'testSet', 'mode', 'searchMode', 'limit', 'offset', 'threshold', 'digit', 'sort'].forEach((name) =>
     restoreControl(elements[name], settings[name])
   );
   const statusTiles = [...document.querySelectorAll('.summary article[data-status]')];
@@ -77,6 +87,7 @@ const saveSettings = () => {
       SETTINGS_KEY,
       JSON.stringify({
         dataset: elements.dataset.value,
+        testSet: elements.testSet.value,
         digit: elements.digit.value,
         limit: elements.limit.value,
         mode: elements.mode.value,
@@ -108,7 +119,14 @@ const resetSettings = () => {
   renderCards();
 };
 
+const syncTestSets = () => {
+  const newSet = elements.testSet.querySelector('option[value="2026-09-21"]');
+  newSet.hidden = elements.dataset.value !== 'eb';
+  if (newSet.hidden && elements.testSet.value === '2026-09-21') elements.testSet.value = 'standard';
+};
+
 restoreSettings();
+syncTestSets();
 
 const threshold = () => Number(elements.threshold.value);
 const isUncertain = (result) => result.confidence < threshold();
@@ -144,8 +162,16 @@ const el = (tag, props, ...children) => {
 
 const buildCandidate = (candidate, index) => {
   const article = el('article', { className: `candidate ${index === 0 ? 'winner' : ''}` });
+  const image = el('img', {
+    src: candidate.image || MISSING_TRAINING_IMAGE,
+    alt: candidate.image ? `Trainingsbild für Ziffer ${candidate.digit}` : 'Kein Trainingsbild vorhanden',
+  });
+  image.addEventListener('error', () => {
+    image.src = MISSING_TRAINING_IMAGE;
+    image.alt = 'Kein Trainingsbild vorhanden';
+  }, { once: true });
   article.append(
-    el('img', { src: candidate.image, alt: `Trainingsbild für Ziffer ${candidate.digit}` }),
+    image,
     el(
       'div',
       {},
@@ -158,6 +184,7 @@ const buildCandidate = (candidate, index) => {
 };
 
 const showDetails = (result) => {
+  clearTimeout(state.traceTimer);
   const head = el(
     'div',
     { className: 'detail-head' },
@@ -196,8 +223,116 @@ const showDetails = (result) => {
     )
   );
   const candidates = el('div', { className: 'candidates' }, ...result.candidates.map(buildCandidate));
-  elements.detailContent.replaceChildren(head, el('h3', { textContent: 'Ähnlichste Trainingsbilder' }), candidates);
+  const animation = el('section', { className: 'recognition-animation', hidden: true });
+  const animateButton = el('button', {
+    className: 'secondary animate-button',
+    textContent: 'Erkennung animieren',
+    type: 'button',
+  });
+  animateButton.addEventListener('click', () => animateRecognition(result, animation, animateButton));
+  elements.detailContent.replaceChildren(
+    head,
+    el('div', { className: 'detail-actions' }, animateButton),
+    animation,
+    el('h3', { textContent: 'Ähnlichste Trainingsbilder' }),
+    candidates
+  );
   elements.details.showModal();
+};
+
+const traceTitle = (step) => {
+  if (step.type === 'fallback') return 'Unsicher – vollständige Suche';
+  if (step.type === 'vote') return 'Abstimmung der Rastergrößen';
+  return `Raster ${step.dimension}`;
+};
+
+const renderTraceStep = (container, step, result, index, total) => {
+  const progress = el(
+    'div',
+    { className: 'trace-progress', 'aria-label': `Schritt ${index + 1} von ${total}` },
+    ...Array.from({ length: total }, (_, position) => el('i', { className: position <= index ? 'active' : '' }))
+  );
+  const copy = step.type === 'fallback'
+    ? `Konfidenz unter ${step.threshold.toFixed(2)}: Die Vorauswahl wird verworfen und alle Trainingsbilder werden geprüft.`
+    : step.type === 'vote'
+      ? `Kein Raster war sicher genug. Die Einzelergebnisse stimmen gemeinsam für Ziffer ${step.prediction}.`
+      : `Konfidenz ${step.confidence.toFixed(2)} · Schwelle ${step.threshold.toFixed(2)} · ${
+        step.accepted ? 'Ergebnis akzeptiert' : 'weiter zum nächsten Raster'
+      }`;
+  const image = el('img', {
+    src: step.queryImage || result.queryImage,
+    alt: step.dimension ? `Verglichenes Raster ${step.dimension}` : 'Verglichenes Raster',
+  });
+  const candidateList = step.type === 'vote'
+    ? el(
+      'div',
+      { className: 'trace-votes' },
+      el('strong', { textContent: 'Abstimmung je Raster' }),
+      ...step.votes.map((vote) => el(
+        'span',
+        {},
+        el('b', { textContent: vote.dimension }),
+        el('b', { textContent: vote.digit === undefined ? '–' : `Ziffer ${vote.digit}` }),
+        el('small', { textContent: `Konfidenz ${vote.confidence.toFixed(2)}` })
+      )),
+      el('strong', { textContent: `Ergebnis: Ziffer ${step.prediction}` })
+    )
+    : step.candidates?.length
+      ? el('div', { className: 'trace-candidates' }, ...step.candidates.map(buildCandidate))
+      : el('div', { className: 'trace-fallback-icon', textContent: '128 → alle' });
+  container.replaceChildren(
+    progress,
+    el(
+      'div',
+      { className: `trace-stage trace-${step.type}` },
+      el('figure', {}, image, el('figcaption', { textContent: traceTitle(step) })),
+      el('div', { className: 'trace-explanation' }, el('h3', { textContent: traceTitle(step) }), el('p', { textContent: copy }))
+    ),
+    candidateList
+  );
+};
+
+const animateRecognition = async (result, container, button) => {
+  clearTimeout(state.traceTimer);
+  container.hidden = false;
+  container.replaceChildren(el('p', { className: 'trace-loading', textContent: 'Erkennung wird nachvollzogen …' }));
+  button.disabled = true;
+  button.textContent = 'Trace wird geladen …';
+  const config = state.runConfig || {
+    dataset: elements.dataset.value,
+    testSet: elements.testSet.value,
+    mode: elements.mode.value,
+    searchMode: elements.searchMode.value,
+    threshold: elements.threshold.value,
+  };
+  try {
+    const params = new URLSearchParams({
+      dataset: config.dataset,
+      testSet: config.testSet,
+      digit: result.expected,
+      file: result.filename,
+      mode: config.mode,
+      search: config.searchMode,
+      threshold: config.threshold,
+    });
+    const response = await fetch(`/api/trace?${params}`);
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || 'Trace konnte nicht geladen werden');
+    const show = (index) => {
+      renderTraceStep(container, payload.steps[index], payload.result, index, payload.steps.length);
+      if (index < payload.steps.length - 1) {
+        state.traceTimer = setTimeout(() => show(index + 1), 1700);
+      } else {
+        button.disabled = false;
+        button.textContent = 'Animation wiederholen';
+      }
+    };
+    show(0);
+  } catch (error) {
+    container.replaceChildren(el('p', { className: 'error-message', textContent: error.message }));
+    button.disabled = false;
+    button.textContent = 'Erneut versuchen';
+  }
 };
 
 const renderCards = () => {
@@ -255,6 +390,13 @@ const renderSummary = () => {
 
 const run = async () => {
   saveSettings();
+  state.runConfig = {
+    dataset: elements.dataset.value,
+    testSet: elements.testSet.value,
+    mode: elements.mode.value,
+    searchMode: elements.searchMode.value,
+    threshold: elements.threshold.value,
+  };
   elements.run.disabled = true;
   elements.reset.disabled = true;
   elements.run.querySelector('span').textContent = 'OCR läuft …';
@@ -276,6 +418,7 @@ const run = async () => {
   try {
     const params = new URLSearchParams({
       dataset: elements.dataset.value,
+      testSet: elements.testSet.value,
       limit: elements.limit.value,
       mode: elements.mode.value,
       search: elements.searchMode.value,
@@ -365,7 +508,12 @@ elements.more.addEventListener('click', () => {
   state.visible += PAGE_SIZE;
   renderCards();
 });
-['dataset', 'limit', 'mode', 'offset', 'searchMode'].forEach((name) => elements[name].addEventListener('change', saveSettings));
+elements.dataset.addEventListener('change', () => {
+  syncTestSets();
+  saveSettings();
+});
+elements.testSet.addEventListener('change', saveSettings);
+['limit', 'mode', 'offset', 'searchMode'].forEach((name) => elements[name].addEventListener('change', saveSettings));
 elements.digit.addEventListener('change', () => {
   saveSettings();
   resetAndRender();
@@ -402,6 +550,7 @@ document.querySelectorAll('.summary article[data-status]').forEach((tile) => {
   });
 });
 $('.dialog-close').addEventListener('click', () => elements.details.close());
+elements.details.addEventListener('close', () => clearTimeout(state.traceTimer));
 elements.details.addEventListener('click', (event) => {
   if (event.target === elements.details) elements.details.close();
 });

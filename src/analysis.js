@@ -5,6 +5,10 @@ const ocrengine = require('./ocr')();
 const { confidence, vote } = ocrengine;
 const dataPath = path.join(path.resolve(__dirname, '..'), 'data');
 const datasets = new Set(['eb', 'mnist']);
+const testSets = {
+  eb: { standard: 'test', '2026-09-21': 'test-2026-09-21' },
+  mnist: { standard: 'test' },
+};
 const dimensions = ['6x4', '7x5', '8x6'];
 const modes = new Set(['auto', ...dimensions]);
 const searchModes = new Set(['optimized', 'full']);
@@ -13,7 +17,7 @@ const recognitionOptionsFor = (dataset, searchMode = 'optimized') => {
   if (!datasets.has(dataset)) throw new Error('Unbekannter Datensatz');
   if (!searchModes.has(searchMode)) throw new Error('Unbekannter Suchmodus');
   if (searchMode === 'full') return {};
-  return { candidateLimit: 128, fallbackConfidence: dataset === 'eb' ? 1.5 : 1.25 };
+  return { candidateLimit: 128, fallbackConfidence: dataset === 'eb' ? 2 : 1.25 };
 };
 
 const loadDatabases = (dataset, mode) =>
@@ -24,9 +28,21 @@ const loadDatabases = (dataset, mode) =>
       data: require(path.join(dataPath, 'dbs', `${dataset}-db-train-${dimension}`)),
     }));
 
+const testDirectory = (dataset, testSet = 'standard') => {
+  const directoryName = testSets[dataset] && testSets[dataset][testSet];
+  if (!directoryName) throw new Error('Unbekanntes Testset');
+  return path.join(dataPath, 'imgs', dataset, directoryName);
+};
+
 const imageUrl = (type, dataset, digit, name) => `/image/${type}/${dataset}/${digit}/${encodeURIComponent(name)}`;
 const queryImageUrl = (dimension, type, dataset, digit, name) =>
   `/image/query/${dimension}/${type}/${dataset}/${digit}/${encodeURIComponent(name)}`;
+const candidateResults = (candidates, dataset) => candidates.map((candidate) => ({
+  digit: candidate.digit,
+  distance: candidate.dist,
+  image: candidate.name ? imageUrl('train', dataset, candidate.digit, candidate.name) : null,
+  name: candidate.name,
+}));
 
 // Je groeber das Raster, desto eher wirkt ein Treffer zufaellig "sicher": mit wenigen
 // Zellen gibt es weniger Moeglichkeiten, sich von einer anderen Ziffer zu unterscheiden,
@@ -36,14 +52,27 @@ const queryImageUrl = (dimension, type, dataset, digit, name) =>
 const finestCellCount = Math.max(...dimensions.map((dim) => dim.split('x').reduce((a, b) => a * Number(b), 1)));
 const secureThresholdFor = (dimr, dimc, secureThreshold) => secureThreshold * Math.sqrt(finestCellCount / (dimr * dimc));
 
-const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4, options = {}) => {
+const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4, options = {}, trace) => {
   const recognize = ocrengine.createRecognizer(file, options);
   const attempts = [];
+  const filename = path.basename(file);
   let secure;
   for (const { dimension, data } of databases) {
     const candidates = recognize(data);
+    const candidateConfidence = confidence(candidates);
+    const threshold = secureThresholdFor(data.dimr, data.dimc, secureThreshold);
     attempts.push(candidates);
-    if (confidence(candidates) >= secureThresholdFor(data.dimr, data.dimc, secureThreshold)) {
+    if (trace) trace.push({
+      accepted: candidateConfidence >= threshold,
+      candidates: candidateResults(candidates.slice(0, 3), dataset),
+      confidence: candidateConfidence,
+      dimension,
+      queryImage: queryImageUrl(dimension, 'test', dataset, expected, filename),
+      search: options.candidateLimit ? 'optimized' : 'full',
+      threshold,
+      type: 'dimension',
+    });
+    if (candidateConfidence >= threshold) {
       secure = { candidates, dimension };
       break;
     }
@@ -56,18 +85,13 @@ const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4,
     dimension: databases[databases.length - 1].dimension,
   };
   if (options.candidateLimit && options.fallbackConfidence && confidence(best.candidates) < options.fallbackConfidence) {
-    return analyzeImage(file, expected, dataset, databases, secureThreshold);
+    if (trace) trace.push({ type: 'fallback', threshold: options.fallbackConfidence });
+    return analyzeImage(file, expected, dataset, databases, secureThreshold, {}, trace);
   }
   const prediction = best.candidates[0].digit;
-  const candidates = best.candidates.map((candidate) => ({
-    digit: candidate.digit,
-    distance: candidate.dist,
-    image: imageUrl('train', dataset, candidate.digit, candidate.name),
-    name: candidate.name,
-  }));
+  const candidates = candidateResults(best.candidates, dataset);
 
-  const filename = path.basename(file);
-  return {
+  const result = {
     candidates,
     confidence: confidence(best.candidates),
     correct: prediction === expected,
@@ -78,11 +102,32 @@ const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4,
     queryImage: queryImageUrl(best.dimension, 'test', dataset, expected, filename),
     prediction,
   };
+  if (!secure && attempts.length > 1) {
+    if (trace) trace.push({
+      candidates,
+      confidence: result.confidence,
+      dimension: result.dimension,
+      prediction,
+      votes: attempts.map((attempt, index) => ({
+        confidence: confidence(attempt),
+        digit: attempt[0] && attempt[0].digit,
+        dimension: databases[index] && databases[index].dimension,
+      })),
+      type: 'vote',
+    });
+  }
+  return result;
 };
 
-const listTasks = ({ dataset, limit, offset }) =>
+const traceImage = (file, expected, dataset, databases, secureThreshold = 2.4, options = {}) => {
+  const steps = [];
+  const result = analyzeImage(file, expected, dataset, databases, secureThreshold, options, steps);
+  return { result, steps };
+};
+
+const listTasks = ({ dataset, limit, offset, testSet = 'standard' }) =>
   Array.from({ length: 10 }, (_, digit) => {
-    const directory = path.join(dataPath, 'imgs', dataset, 'test', `img${digit}`);
+    const directory = path.join(testDirectory(dataset, testSet), `img${digit}`);
     return fs
       .readdirSync(directory)
       .filter((name) => name.toLowerCase().endsWith('.png'))
@@ -108,5 +153,8 @@ module.exports = {
   queryImageUrl,
   recognitionOptionsFor,
   searchModes,
+  testDirectory,
+  testSets,
+  traceImage,
   validate,
 };
