@@ -6,6 +6,7 @@ const { URL } = require('url');
 const { Worker } = require('worker_threads');
 const { PNG } = require('pngjs');
 const img = require('./img');
+const { SECURE_CONFIDENCE } = require('./ocr');
 const {
   analyzeImage,
   dataPath,
@@ -163,14 +164,14 @@ const ensurePool = () => {
     const entry = { worker, busy: false };
     worker.unref();
     worker.on('message', ({ id, results, error }) =>
-      settle(entry, id, (pending) => (error ? pending.reject(new Error(error)) : pending.resolve(results)))
+      settle(entry, id, (pending) => (error ? pending.reject(new Error(error)) : pending.resolve(results))),
     );
     worker.on('error', (error) => {
       // Abgestuerzten Worker aussortieren, sonst bekaeme er weiter Chunks zugeteilt.
       // Stirbt der letzte, legt ensurePool() beim naechsten Request einen neuen Pool an.
       poolWorkers.splice(poolWorkers.indexOf(entry), 1);
       [...pendingChunks].forEach(
-        ([id, pending]) => pending.entry === entry && settle(entry, id, (p) => p.reject(error))
+        ([id, pending]) => pending.entry === entry && settle(entry, id, (p) => p.reject(error)),
       );
     });
     poolWorkers.push(entry);
@@ -198,7 +199,7 @@ const runAnalysis = async ({
   offset,
   mode = 'auto',
   searchMode = 'optimized',
-  secureThreshold = 2.4,
+  secureThreshold = SECURE_CONFIDENCE,
   testSet = 'standard',
 }) => {
   validate({ dataset, mode });
@@ -210,10 +211,10 @@ const runAnalysis = async ({
   ensurePool();
   const chunkSize = Math.max(4, Math.ceil(tasks.length / (poolWorkers.length * 4)));
   const chunks = Array.from({ length: Math.ceil(tasks.length / chunkSize) }, (_, i) =>
-    tasks.slice(i * chunkSize, (i + 1) * chunkSize)
+    tasks.slice(i * chunkSize, (i + 1) * chunkSize),
   );
   const answers = await Promise.all(
-    chunks.map((chunkTasks) => runChunk({ tasks: chunkTasks, dataset, mode, searchMode, secureThreshold }))
+    chunks.map((chunkTasks) => runChunk({ tasks: chunkTasks, dataset, mode, searchMode, secureThreshold })),
   );
 
   const results = new Array(tasks.length);
@@ -227,7 +228,7 @@ const traceAnalysis = ({
   filename,
   mode = 'auto',
   searchMode = 'optimized',
-  secureThreshold = 2.4,
+  secureThreshold = SECURE_CONFIDENCE,
   testSet = 'standard',
 }) => {
   validate({ dataset, mode });
@@ -240,13 +241,14 @@ const traceAnalysis = ({
     dataset,
     loadDatabases(dataset, mode),
     secureThreshold,
-    recognitionOptionsFor(dataset, searchMode)
+    recognitionOptionsFor(dataset, searchMode),
   );
 };
 
 // Liefert vorab die Gesamtzahl, damit der Client trotz Batches einen Fortschritt anzeigen kann.
 const planAnalysis = ({ dataset, limit, offset, testSet = 'standard' }) => (
-  validate({ dataset, mode: 'auto' }), { total: listTasks({ dataset, limit, offset, testSet }).length }
+  validate({ dataset, mode: 'auto' }),
+  { total: listTasks({ dataset, limit, offset, testSet }).length }
 );
 
 const serveImage = (response, pathname) => {
@@ -255,7 +257,7 @@ const serveImage = (response, pathname) => {
     const [, dimension, type, dataset, digit, encodedName] = queryMatch;
     const file = safeFile(
       path.join(dataPath, 'imgs', dataset, type, `img${digit}`),
-      path.basename(decodeURIComponent(encodedName))
+      path.basename(decodeURIComponent(encodedName)),
     );
     sendQueryGrid(response, file, dimension);
     return;
@@ -266,10 +268,28 @@ const serveImage = (response, pathname) => {
   const group = type === 'test' ? 'test' : 'train';
   const file = safeFile(
     path.join(dataPath, 'imgs', dataset, group, `img${digit}`),
-    path.basename(decodeURIComponent(encodedName))
+    path.basename(decodeURIComponent(encodedName)),
   );
   sendNormalizedImage(response, file);
 };
+
+// Fehlende oder leere Parameter bekommen den Standardwert - Number(null) und Number('')
+// waeren sonst 0 und wuerden etwa die Schwelle auf 1 klemmen.
+const numberParam = (params, name, fallback, min, max) => {
+  const value = params.get(name);
+  const number = value === null || value.trim() === '' ? NaN : Number(value);
+  return Number.isFinite(number) ? Math.min(Math.max(number, min), max) : fallback;
+};
+
+const requestParams = (params) => ({
+  dataset: params.get('dataset') || 'eb',
+  testSet: params.get('testSet') || 'standard',
+  limit: numberParam(params, 'limit', 20, 0, 5000),
+  offset: numberParam(params, 'offset', 0, 0, Infinity),
+  mode: params.get('mode') || 'auto',
+  searchMode: params.get('search') || 'optimized',
+  secureThreshold: numberParam(params, 'threshold', SECURE_CONFIDENCE, 1, 100),
+});
 
 const handleRequest = (request, response) => {
   if (request.method !== 'GET' && request.method !== 'HEAD') {
@@ -278,11 +298,7 @@ const handleRequest = (request, response) => {
     return;
   }
   const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
-  const dataset = url.searchParams.get('dataset') || 'eb';
-  const testSet = url.searchParams.get('testSet') || 'standard';
-  const requestedLimit = Number(url.searchParams.get('limit'));
-  const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 0), 5000) : 20;
-  const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
+  const { dataset, testSet, limit, offset, mode, searchMode, secureThreshold } = requestParams(url.searchParams);
   if (url.pathname === '/api/plan') {
     try {
       json(response, 200, planAnalysis({ dataset, limit, offset, testSet }));
@@ -292,20 +308,12 @@ const handleRequest = (request, response) => {
     return;
   }
   if (url.pathname === '/api/run') {
-    const mode = url.searchParams.get('mode') || 'auto';
-    const searchMode = url.searchParams.get('search') || 'optimized';
-    const requestedThreshold = Number(url.searchParams.get('threshold'));
-    const secureThreshold = Number.isFinite(requestedThreshold) ? Math.min(Math.max(requestedThreshold, 1), 100) : 2.4;
     runAnalysis({ dataset, limit, offset, mode, searchMode, secureThreshold, testSet })
       .then((payload) => json(response, 200, payload))
       .catch((error) => json(response, 500, { error: error.message }));
     return;
   }
   if (url.pathname === '/api/trace') {
-    const mode = url.searchParams.get('mode') || 'auto';
-    const searchMode = url.searchParams.get('search') || 'optimized';
-    const requestedThreshold = Number(url.searchParams.get('threshold'));
-    const secureThreshold = Number.isFinite(requestedThreshold) ? Math.min(Math.max(requestedThreshold, 1), 100) : 2.4;
     try {
       json(
         response,
@@ -318,7 +326,7 @@ const handleRequest = (request, response) => {
           searchMode,
           testSet,
           secureThreshold,
-        })
+        }),
       );
     } catch (error) {
       json(response, 500, { error: error.message });
@@ -339,4 +347,13 @@ if (require.main === module) {
   createServer().listen(port, () => console.log(`OCR-Prüfstand: http://localhost:${port}`));
 }
 
-module.exports = { analyzeImage, createServer, normalizePng, planAnalysis, runAnalysis, stopWorkers, traceAnalysis };
+module.exports = {
+  analyzeImage,
+  createServer,
+  normalizePng,
+  planAnalysis,
+  requestParams,
+  runAnalysis,
+  stopWorkers,
+  traceAnalysis,
+};

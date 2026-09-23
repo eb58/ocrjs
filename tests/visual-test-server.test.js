@@ -6,6 +6,7 @@ const {
   createServer,
   normalizePng,
   planAnalysis,
+  requestParams,
   runAnalysis,
   stopWorkers,
   traceAnalysis,
@@ -63,8 +64,8 @@ describe('runAnalysis via worker pool', () => {
         params.dataset,
         databases,
         params.secureThreshold,
-        recognitionOptionsFor(params.dataset)
-      )
+        recognitionOptionsFor(params.dataset),
+      ),
     );
 
     const actual = await runAnalysis(params);
@@ -85,7 +86,7 @@ describe('runAnalysis via worker pool', () => {
     const fullParams = { ...params, searchMode: 'full' };
     const databases = loadDatabases(params.dataset, params.mode);
     const expected = listTasks(params).map(({ file, expected: digit }) =>
-      analyzeImage(file, digit, params.dataset, databases, params.secureThreshold)
+      analyzeImage(file, digit, params.dataset, databases, params.secureThreshold),
     );
     await expect(runAnalysis(fullParams)).resolves.toMatchObject({ results: expected });
   }, 60000);
@@ -230,5 +231,24 @@ describe('/image/query - das tatsaechlich verglichene Raster', () => {
     const res = await requestBody(`/image/query/9x9/test/eb/${digit}/${encodeURIComponent(filename)}`);
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe('requestParams', () => {
+  const parse = (query) => requestParams(new URLSearchParams(query));
+
+  test('uses the defaults when parameters are missing or empty', () => {
+    const defaults = { limit: 20, offset: 0, secureThreshold: 2.4 };
+    expect(parse('')).toMatchObject(defaults);
+    expect(parse('limit=&offset=&threshold=')).toMatchObject(defaults);
+  });
+
+  test('clamps given values to their allowed range', () => {
+    expect(parse('limit=99999&offset=-5&threshold=0.5')).toMatchObject({ limit: 5000, offset: 0, secureThreshold: 1 });
+    expect(parse('limit=0&threshold=3')).toMatchObject({ limit: 0, secureThreshold: 3 });
+  });
+
+  test('falls back to the defaults for non-numeric values', () => {
+    expect(parse('limit=abc&threshold=x')).toMatchObject({ limit: 20, secureThreshold: 2.4 });
   });
 });
