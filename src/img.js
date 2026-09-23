@@ -3,11 +3,8 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
   const WHITE = 0;
 
   const size = () => w * h;
-  const inrange = (r, c) => r >= 0 && c >= 0 && r < h && c < w;
   const getPix = (c, r) => imgdata[c + r * w];
-  const setPix = (c, r, val) => (imgdata[c + r * w] = val);
   const adjustBW = () => (isInverted() && invert(), api);
-  const remark = (v1, v2) => imgdata.forEach((pix, idx) => pix === v1 && (imgdata[idx] = v2));
   const invert = () => (imgdata.forEach((pix, idx) => (imgdata[idx] = BLACK - pix)), api);
   const frompng = (png) => {
     const n = png.width * png.height;
@@ -81,36 +78,19 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
     return createImage(newImgdata, nw, nh);
   };
 
-  const cropGlyph = () => {
-    const rect = box(BLACK);
+  const cropTo = (rect) => {
     if (!rect) return createImage([WHITE], 1, 1);
     const [nh, nw] = [rect.rmax - rect.rmin + 1, rect.cmax - rect.cmin + 1];
-
     const newImgdata = Array(nh * nw);
     for (let r = 0; r < nh; r++) {
       const rr1 = r * nw;
       const rr2 = (rect.rmin + r) * w;
-      for (let c = 0; c < nw; c++) {
-        newImgdata[rr1 + c] = imgdata[rr2 + rect.cmin + c];
-      }
+      for (let c = 0; c < nw; c++) newImgdata[rr1 + c] = imgdata[rr2 + rect.cmin + c];
     }
     return createImage(newImgdata, nw, nh);
   };
-  const cropGlyphInner = () => {
-    const rect = innerbox();
-    if (!rect) return createImage([WHITE], 1, 1);
-    const [nh, nw] = [rect.rmax - rect.rmin + 1, rect.cmax - rect.cmin + 1];
-
-    const newImgdata = Array(nh * nw);
-    for (let r = 0; r < nh; r++) {
-      const rr1 = r * nw;
-      const rr2 = (rect.rmin + r) * w;
-      for (let c = 0; c < nw; c++) {
-        newImgdata[rr1 + c] = imgdata[rr2 + rect.cmin + c];
-      }
-    }
-    return createImage(newImgdata, nw, nh);
-  };
+  const cropGlyph = () => cropTo(box(BLACK));
+  const cropGlyphInner = () => cropTo(innerbox());
 
   const despeckle = (N = 3) => {
     const despeckle2 = (COLOR) => {
@@ -209,7 +189,7 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
   };
 
   const expandbox = (rect) => {
-    // rect.rmax/cmax from box() are inclusive; cntarea() consumes them as an
+    // rect.rmax/cmax from box() are inclusive; the scan in extractGlyph() consumes them as an
     // exclusive upper bound, so +1 before adding the margin.
     const marginr = Math.floor(h / 15);
     const marginc = Math.floor(w / 15);
@@ -221,91 +201,84 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
     };
   };
 
-  const cntarea = (rect, val) => {
-    // Count the number of pixels having value 'val' in RECT
-    let cnt = 0;
-    for (let r = rect.rmin; r < rect.rmax; r++) {
-      const rr = r * w;
-      for (let c = rect.cmin; c < rect.cmax; c++) {
-        cnt += imgdata[c + rr] === val ? 1 : 0;
-      }
-    }
-    return cnt;
-  };
-
-  const mark8 = (startR, startC, val) => {
-    // Iterativ statt rekursiv: vermeidet Stack-Overflow bei großen Flecken
-    if (!inrange(startR, startC) || getPix(startC, startR) !== BLACK) return 0;
-    const stack = [[startR, startC]];
-    setPix(startC, startR, val);
-    let cnt = 0;
-    while (stack.length) {
-      const [r, c] = stack.pop();
-      cnt++;
-      for (let i = -1; i <= 1; i++) {
-        for (let j = -1; j <= 1; j++) {
-          if (i === 0 && j === 0) continue;
-          const [nr, nc] = [r + i, c + j];
-          if (inrange(nr, nc) && getPix(nc, nr) === BLACK) {
-            setPix(nc, nr, val);
-            stack.push([nr, nc]);
+  // Nummeriert alle 8-zusammenhaengenden schwarzen Teile in einer eigenen Label-Map (die
+  // Bildpixel bleiben dabei unberuehrt) und liefert Flaeche und Umschreibungsrechteck je Teil.
+  // Iterativ statt rekursiv: vermeidet Stack-Overflow bei grossen Flecken.
+  const labelParts = () => {
+    const labels = new Int32Array(w * h);
+    const parts = [];
+    for (let start = 0; start < w * h; start++) {
+      if (imgdata[start] !== BLACK || labels[start]) continue;
+      const label = parts.length + 1;
+      const [r0, c0] = [Math.floor(start / w), start % w];
+      const part = { label, area: 0, rect: { rmin: r0, rmax: r0, cmin: c0, cmax: c0 } };
+      const stack = [start];
+      labels[start] = label;
+      while (stack.length) {
+        const idx = stack.pop();
+        const [r, c] = [Math.floor(idx / w), idx % w];
+        const { rect } = part;
+        part.area++;
+        rect.rmin = Math.min(rect.rmin, r);
+        rect.rmax = Math.max(rect.rmax, r);
+        rect.cmin = Math.min(rect.cmin, c);
+        rect.cmax = Math.max(rect.cmax, c);
+        for (let nr = Math.max(0, r - 1); nr <= Math.min(h - 1, r + 1); nr++) {
+          for (let nc = Math.max(0, c - 1); nc <= Math.min(w - 1, c + 1); nc++) {
+            const n = nr * w + nc;
+            if (imgdata[n] === BLACK && !labels[n]) ((labels[n] = label), stack.push(n));
           }
         }
       }
+      parts.push(part);
     }
-    return cnt;
+    return { labels, parts };
   };
 
-  const region8 = (rect, val) => {
-    // Locate a black region and mark it with val. 8-connected
-    for (let r = rect.rmin; r < rect.rmax; r++) {
-      const rr = r * w;
-      for (let c = rect.cmin; c < rect.cmax; c++) {
-        if (imgdata[c + rr] === BLACK) return mark8(r, c, val);
-      }
-    }
-    return 0;
-  };
-
-  const extractGlyph = () => {
-    const GLYPHPART_MINSIZE = 3;
-    const irect = { rmin: 0, rmax: h, cmin: 0, cmax: w };
-    const parts = [];
-
-    let cnt_area = 0;
-    let mark = 15;
-
-    while ((cnt_area = region8(irect, 9)) > 0) {
-      if (cnt_area <= GLYPHPART_MINSIZE) {
-        remark(9, WHITE); // So kleine Flecken werden getilgt!
-      } else {
-        remark(9, mark);
-        parts.push({ cnt_area, mark });
-        mark++;
-      }
-    }
-
-    if (parts.length === 0) return api;
-
-    if (parts.length === 1) {
-      remark(parts[0].mark, BLACK);
-      return api;
-    }
-
-    const totalcnt = parts.reduce((acc, part) => acc + part.cnt_area, 0);
-
-    parts.forEach((part) => {
-      if (part.cnt_area > totalcnt / parts.length / 2) {
-        remark(part.mark, 10);
-      }
-    });
-
-    const rect = expandbox(box(10));
-
-    parts.forEach((part) => remark(part.mark, cntarea(rect, part.mark) > 0 ? 10 : 0));
-
-    remark(10, BLACK);
+  // Ein Durchlauf: schwarze Pixel bleiben nur stehen, wenn ihr Teil in `kept` liegt.
+  const keepParts = (labels, kept) => {
+    const keep = new Uint8Array(labels.length + 1);
+    kept.forEach((part) => (keep[part.label] = 1));
+    for (let i = 0; i < labels.length; i++) if (labels[i]) imgdata[i] = keep[labels[i]] ? BLACK : WHITE;
     return api;
+  };
+
+  const GLYPHPART_MINSIZE = 3; // kleinere Teile werden immer getilgt
+  const significantParts = () => {
+    const { labels, parts } = labelParts();
+    return { labels, parts: parts.filter((part) => part.area > GLYPHPART_MINSIZE) };
+  };
+  const biggestPart = (parts) =>
+    parts.reduce((current, part) => (!current || part.area > current.area ? part : current), undefined);
+  const unionRect = (rects) =>
+    rects.reduce((a, b) => ({
+      rmin: Math.min(a.rmin, b.rmin),
+      rmax: Math.max(a.rmax, b.rmax),
+      cmin: Math.min(a.cmin, b.cmin),
+      cmax: Math.max(a.cmax, b.cmax),
+    }));
+  const gap = (a, b) => Math.max(0, a.rmin - b.rmax, b.rmin - a.rmax, a.cmin - b.cmax, b.cmin - a.cmax);
+
+  // Behaelt die grossen Teile (ueber der halben Durchschnittsflaeche) und alle Teile, die
+  // mit mindestens einem Pixel in deren um einen Rand erweitertes Rechteck hineinragen.
+  const extractGlyph = () => {
+    const { labels, parts } = significantParts();
+    if (parts.length <= 1) return keepParts(labels, parts);
+    const totalcnt = parts.reduce((acc, part) => acc + part.area, 0);
+    const big = parts.filter((part) => part.area > totalcnt / parts.length / 2);
+    const rect = expandbox(unionRect(big.map((part) => part.rect)));
+    const significant = new Set(parts.map((part) => part.label));
+    const inside = new Set();
+    for (let r = rect.rmin; r < rect.rmax; r++) {
+      for (let c = rect.cmin; c < rect.cmax; c++) {
+        const label = labels[r * w + c];
+        if (significant.has(label)) inside.add(label);
+      }
+    }
+    return keepParts(
+      labels,
+      parts.filter((part) => inside.has(part.label)),
+    );
   };
 
   // Verwirft Teile, die weiter als maxGap (Chebyshev-Abstand der Umschreibungsrechtecke)
@@ -313,61 +286,17 @@ const createImage = (imgdata = [], w = 0, h = 0) => {
   // extractGlyph() (Groesse ODER Position im margenerweiterten Rechteck) zaehlt hier nur
   // der tatsaechliche Abstand zum Hauptstrich.
   const extractGlyphFarFromBiggest = (maxGap) => {
-    const GLYPHPART_MINSIZE = 3;
-    const irect = { rmin: 0, rmax: h, cmin: 0, cmax: w };
-    const parts = [];
-    let cnt_area = 0;
-    let mark = 15;
-    while ((cnt_area = region8(irect, 9)) > 0) {
-      if (cnt_area <= GLYPHPART_MINSIZE) {
-        remark(9, WHITE);
-      } else {
-        remark(9, mark);
-        parts.push({ cnt_area, mark });
-        mark++;
-      }
-    }
-    if (parts.length <= 1) {
-      parts.forEach((part) => remark(part.mark, BLACK));
-      return api;
-    }
-    // Ein Durchlauf statt eines Scans pro Teil: alle Umschreibungsrechtecke auf einmal
-    // einsammeln (box() je Teil waere bei vielen kleinen Flecken O(Teile * Bildgroesse)).
-    const rects = {};
-    for (let r = 0; r < h; r++) {
-      const rr = r * w;
-      for (let c = 0; c < w; c++) {
-        const v = imgdata[rr + c];
-        if (v < 15) continue;
-        const rect = rects[v];
-        if (!rect) rects[v] = { rmin: r, rmax: r, cmin: c, cmax: c };
-        else {
-          if (r > rect.rmax) rect.rmax = r;
-          if (c < rect.cmin) rect.cmin = c;
-          if (c > rect.cmax) rect.cmax = c;
-        }
-      }
-    }
-    parts.forEach((part) => (part.rect = rects[part.mark]));
-    const biggest = parts.reduce((current, part) => (part.cnt_area > current.cnt_area ? part : current));
-    const gap = (a, b) => {
-      const rowGap = Math.max(0, Math.max(a.rmin - b.rmax, b.rmin - a.rmax));
-      const colGap = Math.max(0, Math.max(a.cmin - b.cmax, b.cmin - a.cmax));
-      return Math.max(rowGap, colGap);
-    };
-    parts.forEach((part) => remark(part.mark, gap(biggest.rect, part.rect) <= maxGap ? BLACK : WHITE));
-    return api;
+    const { labels, parts } = significantParts();
+    const biggest = biggestPart(parts);
+    return keepParts(
+      labels,
+      parts.filter((part) => gap(biggest.rect, part.rect) <= maxGap),
+    );
   };
 
   const extractBiggestGlyph = () => {
-    const irect = { rmin: 0, rmax: h, cmin: 0, cmax: w };
-    const parts = [];
-    let mark = 2;
-    let area = 0;
-    while ((area = region8(irect, mark)) > 0) parts.push({ area, mark: mark++ });
-    const biggest = parts.reduce((current, part) => (!current || part.area > current.area ? part : current), undefined);
-    parts.forEach((part) => remark(part.mark, part === biggest ? BLACK : WHITE));
-    return api;
+    const { labels, parts } = labelParts();
+    return keepParts(labels, parts.length ? [biggestPart(parts)] : []);
   };
 
   const prepare = (nh, nw, { cleanGlyph = false } = {}) => {
