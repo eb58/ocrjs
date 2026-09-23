@@ -1,4 +1,8 @@
-jest.mock('fs', () => ({ readFileSync: jest.fn(() => Buffer.from([])) }));
+// Nur die PNG-Eingabe wird ersetzt; die WASM-Kerne muessen weiterhin ladbar sein.
+jest.mock('fs', () => {
+  const { readFileSync } = jest.requireActual('fs');
+  return { readFileSync: jest.fn((file) => (String(file).endsWith('.wasm') ? readFileSync(file) : Buffer.from([]))) };
+});
 jest.mock('pngjs', () => ({ PNG: { sync: { read: jest.fn(() => ({})) } } }));
 jest.mock('../src/img', () => () => {
   const image = { imgdata: [0] };

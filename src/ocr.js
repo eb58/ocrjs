@@ -1,6 +1,7 @@
 const fs = require('fs');
 const PNG = require('pngjs').PNG;
 const img = require('./img');
+const wasmSearch = require('./wasm-search');
 
 const SECURE_CONFIDENCE = 2.4;
 
@@ -19,6 +20,11 @@ const distFct = (v1, v2, bestDistance) => {
 const findNearestDigit = (imgvec, db, limit = 3, seeds, seedCount = 32) =>
   DIGITS.map((digit) => {
     const best = { digit, dist: Number.MAX_SAFE_INTEGER };
+    const fast = !seeds && wasmSearch.nearest(imgvec, db[digit]);
+    if (fast) {
+      const { imgvec: nearestVec, name } = db[digit][fast.index];
+      return Object.assign(best, { dist: fast.dist, imgvec: nearestVec, name });
+    }
     const selected = seeds ? (seeds[digit] = []) : undefined;
     db[digit].forEach((dbi) => {
       const threshold = selected
@@ -75,6 +81,8 @@ const distBased = (v1, s1, v2, s2, bestDistance) => {
 const searchBased = (query, querySmooth, db, dimc) =>
   DIGITS.map((digit) => {
     const best = { digit, dist: Number.MAX_SAFE_INTEGER };
+    const fast = wasmSearch.based(query, querySmooth, db[digit], (vec) => smoothVec(vec, dimc));
+    if (fast) return Object.assign(best, { dist: fast.dist, name: db[digit][fast.index].name });
     db[digit].forEach((dbi) => {
       if (!dbi.smooth) dbi.smooth = smoothVec(dbi.imgvec, dimc);
       const dist = distBased(dbi.imgvec, dbi.smooth, query, querySmooth, best.dist);
@@ -108,6 +116,8 @@ const searchRows = (query, db, dimr, dimc) => {
   const starts = Array.from({ length: dimr }, (_, row) => Math.max(0, row - window));
   const ends = Array.from({ length: dimr }, (_, row) => Math.min(dimr - 1, row + window));
   return DIGITS.map((digit) => {
+    const fast = wasmSearch.rows(query, db[digit], dimr, dimc, starts, ends);
+    if (fast !== null) return { digit, dist: fast };
     const perRow = new Array(dimr).fill(Number.MAX_SAFE_INTEGER);
     db[digit].forEach((dbi) => {
       for (let row = 0; row < dimr; row++) {
@@ -140,6 +150,8 @@ const searchCols = (query, db, dimr, dimc) => {
   // gemessen (2026-09-23): gleiche Fehlerzahl auf EB und MNIST, daher unveraendert.
   const ends = Array.from({ length: dimc }, (_, col) => Math.min(dimc - 1, col));
   return DIGITS.map((digit) => {
+    const fast = wasmSearch.cols(query, db[digit], dimr, dimc, starts, ends);
+    if (fast !== null) return { digit, dist: fast };
     const perCol = new Array(dimc).fill(Number.MAX_SAFE_INTEGER);
     db[digit].forEach((dbi) => {
       for (let col = 0; col < dimc; col++) {
@@ -174,6 +186,8 @@ const searchQuad = (query, db, dimr, dimc) => {
   const colStarts = Array.from({ length: dimc }, (_, col) => Math.max(0, col - colWindow));
   const colEnds = Array.from({ length: dimc }, (_, col) => Math.min(dimc - 1, col + colWindow));
   return DIGITS.map((digit) => {
+    const fast = wasmSearch.quad(query, db[digit], dimr, dimc, rowStarts, rowEnds, colStarts, colEnds);
+    if (fast !== null) return { digit, dist: fast };
     const perCell = new Array(dimr * dimc).fill(Number.MAX_SAFE_INTEGER);
     db[digit].forEach((dbi) => {
       for (let row = 0; row < dimr; row++) {
@@ -205,6 +219,8 @@ const searchQuad = (query, db, dimr, dimc) => {
 const shortlist = (query, db, limit) =>
   Object.fromEntries(
     DIGITS.map((digit) => {
+      const fast = wasmSearch.topK(query, db[digit], limit);
+      if (fast) return [digit, fast];
       const best = [];
       db[digit].forEach((sample) => {
         const threshold = best.length < limit ? Infinity : best[best.length - 1].dist;

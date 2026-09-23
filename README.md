@@ -29,6 +29,16 @@ Im Prüfstand lässt sich neben dem EB-Bestand auch die am 21.09.2026
 hinzugekommene EB-Testmenge auswählen. Sie liegt getrennt unter
 `data/imgs/eb/test-2026-09-21`.
 
+## WASM-Suche
+
+Die Distanzsuchen aus `src/ocr.js` laufen als WebAssembly-Kerne (`assembly/search.ts`, AssemblyScript). Das übersetzte `src/search.wasm` ist eingecheckt; neu bauen ist nur nach Änderungen an `assembly/search.ts` nötig:
+
+```sh
+npm run build:wasm
+```
+
+Die Kerne liefern bitgleiche Ergebnisse zur JS-Fassung, die als Rückfall erhalten bleibt (etwa für Nicht-Ganzzahlvektoren). `OCR_WASM=0` schaltet WASM zum Vergleichen ab; `tests/wasm-search.test.js` prüft die Gleichheit.
+
 ## Hilfsskripte
 
 Eine Einordnung der Generatoren, Importwerkzeuge und historischen Benchmarks
