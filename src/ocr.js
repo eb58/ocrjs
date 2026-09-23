@@ -6,9 +6,6 @@ const ocr = () => {
 
   const range = n => [...Array(n).keys()]
   const DIGITS = range(10)
-  // const zip = (xs, ys, f) => xs.map((x, i) => f ? f(xs[i], ys[i]) : [xs[i], ys[i]])
-  // const sum = (xs) => xs.reduce((acc, x) => acc + x, 0)
-  //const distFct = (v1, v2) => sum(zip(v1, v2, (x, y) => sqr(x - y)))
   const distFct = (v1, v2, bestDistance) => {
     let sum = 0;
     for (let i = 0; i < v1.length; i++) {
@@ -174,12 +171,9 @@ const ocr = () => {
     }).sort((a, b) => a.dist - b.dist);
   };
 
-  // Kaskadiert ueber die verschiebungstoleranten Abstandsmasse, sobald die einfache
-  // Distanz kein sicheres Ergebnis liefert. Liefert keines davon ein sicheres Ergebnis,
-  // bekommt die aufrufende Stelle alle Versuche zurueck, um sie per Abstimmung (vote)
-  // mit der bereinigten Bildsicht zu kombinieren, statt sie einfach zu verwerfen.
-  // Experimental preselection by full squared distance, separately for each digit.
-  // Stable ties retain database order; early termination uses the worst retained distance.
+  // Vorauswahl der `limit` naechsten Proben je Ziffer nach voller quadratischer Distanz.
+  // Gleichstaende behalten die Reihenfolge der Datenbank; der Fruehabbruch nutzt die
+  // schlechteste behaltene Distanz als Schranke.
   const shortlist = (query, db, limit) => Object.fromEntries(DIGITS.map(digit => {
     const best = [];
     db[digit].forEach(sample => {
@@ -193,6 +187,10 @@ const ocr = () => {
     return [digit, best.map(({ sample }) => sample)];
   }));
 
+  // Kaskadiert ueber die verschiebungstoleranten Abstandsmasse, sobald die einfache
+  // Distanz kein sicheres Ergebnis liefert. Liefert keines davon ein sicheres Ergebnis,
+  // bekommt die aufrufende Stelle alle Versuche zurueck, um sie per Abstimmung (vote)
+  // mit der bereinigten Bildsicht zu kombinieren, statt sie einfach zu verwerfen.
   const searchSecure = (query, db, candidateLimit, priorityCount) => {
     const { dimr, dimc } = db;
     const attempts = [];
