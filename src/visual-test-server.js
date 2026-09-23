@@ -246,6 +246,28 @@ const traceAnalysis = ({
   );
 };
 
+// Verschiebt ein falsch einsortiertes Testbild in den Ordner einer anderen Ziffer derselben
+// Testmenge oder nach removed/<testmenge>/img<ziffer> (wiederherstellbar). Nie ueberschreiben.
+const isDigit = (value) => Number.isInteger(value) && value >= 0 && value <= 9;
+const relabelImage = ({ dataset, testSet = 'standard', digit, filename, target }) => {
+  validate({ dataset, mode: 'auto' });
+  if (!isDigit(digit)) throw new Error('Ungueltige Ziffer');
+  if (target !== 'removed' && (!isDigit(target) || target === digit)) throw new Error('Ungueltiges Ziel');
+  const setDirectory = testDirectory(dataset, testSet);
+  const name = path.basename(filename || '');
+  const from = safeFile(path.join(setDirectory, `img${digit}`), name);
+  if (!from || !fs.existsSync(from)) throw new Error('Testbild nicht gefunden');
+  const targetDirectory =
+    target === 'removed'
+      ? path.join(dataPath, 'imgs', dataset, 'removed', path.basename(setDirectory), `img${digit}`)
+      : path.join(setDirectory, `img${target}`);
+  const to = safeFile(targetDirectory, name);
+  if (!to || fs.existsSync(to)) throw new Error('Im Zielordner liegt schon ein Bild mit diesem Namen');
+  fs.mkdirSync(targetDirectory, { recursive: true });
+  fs.renameSync(from, to);
+  return { moved: path.relative(dataPath, to).split(path.sep).join('/'), target };
+};
+
 // Liefert vorab die Gesamtzahl, damit der Client trotz Batches einen Fortschritt anzeigen kann.
 const planAnalysis = ({ dataset, limit, offset, testSet = 'standard' }) => (
   validate({ dataset, mode: 'auto' }),
@@ -296,12 +318,31 @@ const requestParams = (params) => ({
 });
 
 const handleRequest = (request, response) => {
+  const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+  if (request.method === 'POST' && url.pathname === '/api/relabel') {
+    const target = url.searchParams.get('target');
+    try {
+      json(
+        response,
+        200,
+        relabelImage({
+          dataset: url.searchParams.get('dataset') || 'eb',
+          testSet: url.searchParams.get('testSet') || 'standard',
+          digit: Number(url.searchParams.get('digit')),
+          filename: url.searchParams.get('file'),
+          target: target === 'removed' ? target : Number(target),
+        }),
+      );
+    } catch (error) {
+      json(response, 400, { error: error.message });
+    }
+    return;
+  }
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     response.writeHead(405, { Allow: 'GET, HEAD' });
     response.end('Method not allowed');
     return;
   }
-  const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
   const { dataset, testSet, limit, offset, mode, searchMode, secureThreshold } = requestParams(url.searchParams);
   if (url.pathname === '/api/plan') {
     try {
@@ -356,6 +397,7 @@ module.exports = {
   createServer,
   normalizePng,
   planAnalysis,
+  relabelImage,
   requestParams,
   runAnalysis,
   stopWorkers,

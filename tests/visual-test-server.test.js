@@ -1,3 +1,4 @@
+const fs = require('fs');
 const http = require('http');
 const path = require('path');
 const { PNG } = require('pngjs');
@@ -6,6 +7,7 @@ const {
   createServer,
   normalizePng,
   planAnalysis,
+  relabelImage,
   requestParams,
   runAnalysis,
   stopWorkers,
@@ -269,5 +271,79 @@ describe('requestParams', () => {
 
   test('falls back to the defaults for non-numeric values', () => {
     expect(parse('limit=abc&threshold=x')).toMatchObject({ limit: 20, secureThreshold: 2.4 });
+  });
+});
+
+describe('relabelImage - falsch einsortierte Testbilder verschieben', () => {
+  const reviewDir = path.join(__dirname, '..', 'data', 'imgs', 'eb', 'review');
+  const removedDir = path.join(__dirname, '..', 'data', 'imgs', 'eb', 'removed', 'review');
+  const name = '__relabel-test.png';
+  const at = (digit) => path.join(reviewDir, `img${digit}`, name);
+  const cleanup = () =>
+    [...Array.from({ length: 10 }, (_, digit) => at(digit)), path.join(removedDir, 'img3', name)].forEach((file) =>
+      fs.rmSync(file, { force: true }),
+    );
+  const params = (digit, target) => ({ dataset: 'eb', testSet: 'review', digit, filename: name, target });
+
+  beforeEach(() => {
+    cleanup();
+    fs.copyFileSync(listTasks({ dataset: 'eb', testSet: 'review', limit: 1, offset: 0 })[0].file, at(0));
+  });
+  afterAll(cleanup);
+
+  test('moves an image to another digit folder of the same test set and back', () => {
+    expect(relabelImage(params(0, 3))).toEqual({ moved: `imgs/eb/review/img3/${name}`, target: 3 });
+    expect(fs.existsSync(at(0))).toBe(false);
+    expect(fs.existsSync(at(3))).toBe(true);
+    relabelImage(params(3, 0));
+    expect(fs.existsSync(at(0))).toBe(true);
+  });
+
+  test('sets an image aside under removed/, keeping its digit folder', () => {
+    relabelImage(params(0, 3));
+    expect(relabelImage(params(3, 'removed')).moved).toBe(`imgs/eb/removed/review/img3/${name}`);
+    expect(fs.existsSync(path.join(removedDir, 'img3', name))).toBe(true);
+  });
+
+  test('refuses invalid moves and never overwrites', () => {
+    expect(() => relabelImage(params(0, 0))).toThrow('Ungueltiges Ziel');
+    expect(() => relabelImage(params(0, 10))).toThrow('Ungueltiges Ziel');
+    expect(() => relabelImage({ ...params(4, 1), filename: 'gibt-es-nicht.png' })).toThrow('nicht gefunden');
+    expect(() => relabelImage({ ...params(0, 1), testSet: 'train' })).toThrow('Unbekanntes Testset');
+    fs.copyFileSync(at(0), at(5));
+    expect(() => relabelImage(params(0, 5))).toThrow('schon ein Bild');
+    expect(fs.existsSync(at(0))).toBe(true);
+  });
+
+  test('ignores path components in the file name', () => {
+    expect(() => relabelImage({ ...params(0, 1), filename: `../img0/${name}` })).not.toThrow();
+    expect(fs.existsSync(at(1))).toBe(true);
+  });
+
+  test('is reachable via POST /api/relabel only', async () => {
+    const server = createServer();
+    await new Promise((resolve) => server.listen(0, resolve));
+    const url = (target) =>
+      `http://localhost:${server.address().port}/api/relabel?dataset=eb&testSet=review&digit=0&file=${name}&target=${target}`;
+    const send = (method, target) =>
+      new Promise((resolve, reject) => {
+        const req = http.request(url(target), { method, agent: false }, (res) => {
+          const chunks = [];
+          res.on('data', (chunk) => chunks.push(chunk));
+          res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString() }));
+        });
+        req.on('error', reject);
+        req.end();
+      });
+    try {
+      expect((await send('PUT', 2)).status).toBe(405);
+      expect((await send('POST', 0)).status).toBe(400);
+      const moved = await send('POST', 2);
+      expect(moved.status).toBe(200);
+      expect(JSON.parse(moved.body).target).toBe(2);
+      expect(fs.existsSync(at(2))).toBe(true);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
   });
 });

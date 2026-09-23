@@ -188,6 +188,66 @@ const buildCandidate = (candidate, index) => {
   return article;
 };
 
+const currentConfig = () => state.runConfig || { dataset: elements.dataset.value, testSet: elements.testSet.value };
+
+// URLs zeigen auf .../<ziffer>/<datei>; nach dem Verschieben liegt das Bild unter der neuen Ziffer.
+const withDigit = (url, digit) => url.replace(/\/\d\/([^/]+)$/, `/${digit}/$1`);
+
+// Verschiebt ein falsch einsortiertes Testbild (target: Ziffer oder 'removed') und passt das
+// Ergebnis im Pruefstand an, ohne neu auszuwerten.
+const relabel = async (result, target, status) => {
+  const { dataset, testSet } = currentConfig();
+  status.textContent = 'Wird verschoben …';
+  status.className = 'relabel-status';
+  const params = new URLSearchParams({ dataset, testSet, digit: result.expected, file: result.filename, target });
+  const response = await fetch(`/api/relabel?${params}`, { method: 'POST' });
+  const payload = await response.json();
+  if (!response.ok) {
+    status.textContent = payload.error || 'Verschieben fehlgeschlagen';
+    status.className = 'relabel-status bad';
+    return;
+  }
+  if (target === 'removed') state.results = state.results.filter((other) => other !== result);
+  else
+    Object.assign(result, {
+      expected: target,
+      correct: result.prediction === target,
+      image: withDigit(result.image, target),
+      queryImage: withDigit(result.queryImage, target),
+    });
+  elements.details.close();
+  renderSummary();
+  renderCards();
+};
+
+const buildRelabel = (result) => {
+  const status = el('span', { className: 'relabel-status' });
+  const button = (textContent, className, target) => {
+    const node = el('button', { className: `secondary ${className}`, textContent, type: 'button' });
+    node.addEventListener('click', () => relabel(result, target(), status));
+    return node;
+  };
+  const quick = button(`Nach ${result.prediction} verschieben`, 'relabel-quick', () => result.prediction);
+  quick.hidden = result.correct;
+  const choice = el(
+    'select',
+    { className: 'relabel-choice', title: 'Zielordner' },
+    ...Array.from({ length: 10 }, (_, digit) => digit)
+      .filter((digit) => digit !== result.expected)
+      .map((digit) => el('option', { value: digit, textContent: `Ordner ${digit}` })),
+  );
+  if (!result.correct) choice.value = String(result.prediction);
+  return el(
+    'div',
+    { className: 'relabel' },
+    quick,
+    button('Aussortieren', 'relabel-remove', () => 'removed'),
+    choice,
+    button('Verschieben', '', () => Number(choice.value)),
+    status,
+  );
+};
+
 const showDetails = (result) => {
   clearTimeout(state.traceTimer);
   const head = el(
@@ -237,7 +297,7 @@ const showDetails = (result) => {
   animateButton.addEventListener('click', () => animateRecognition(result, animation, animateButton));
   elements.detailContent.replaceChildren(
     head,
-    el('div', { className: 'detail-actions' }, animateButton),
+    el('div', { className: 'detail-actions' }, buildRelabel(result), animateButton),
     animation,
     el('h3', { textContent: 'Ähnlichste Trainingsbilder' }),
     candidates,

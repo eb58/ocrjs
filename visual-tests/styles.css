@@ -505,7 +505,34 @@ dialog::backdrop {
 .detail-actions {
   padding: 18px 24px 0;
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+.relabel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.relabel select {
+  min-height: 36px;
+}
+.relabel-quick {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.relabel-remove {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.relabel-status {
+  color: var(--muted);
+  font: 0.8rem monospace;
+}
+.relabel-status.bad {
+  color: var(--danger);
 }
 .animate-button {
   color: var(--accent);
