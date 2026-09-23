@@ -2,7 +2,8 @@
 // Rechenreihenfolge, gleiche Abbruchpunkte (Teilsumme >= Schranke), Uebernahme nur bei echt
 // kleinerer Distanz, Gleichstaende behalten das fruehere Trainingsbild.
 // Speicher verwaltet src/wasm-search.js: Vektoren liegen flach als i32 (n Zellen je Bild),
-// geglaettete Vektoren als f64, Teilmengen als i32-Indexliste.
+// geglaettete Vektoren als f64. Jeder Kern bekommt die zu pruefenden Bilder als i32-Indexliste
+// und liefert Positionen in dieser Liste (nicht im flachen Speicher) zurueck.
 
 export function heapBase(): usize {
   return __heap_base;
@@ -17,12 +18,16 @@ export function lastDist(): f64 {
   return load<i32>(ptr + (<usize>i << 2));
 }
 
-// Index des naechsten Bilds nach quadrierter Zelldistanz (findNearestDigit), -1 bei count 0.
-export function nearest(q: usize, db: usize, count: i32, n: i32): i32 {
+@inline function vector(db: usize, idx: usize, k: i32, n: i32): usize {
+  return db + (<usize>(cell(idx, k) * n) << 2);
+}
+
+// Position des naechsten Bilds nach quadrierter Zelldistanz (findNearestDigit), -1 bei count 0.
+export function nearest(q: usize, db: usize, idx: usize, count: i32, n: i32): i32 {
   let best = i32.MAX_VALUE;
   let bestIdx = -1;
   for (let k = 0; k < count; k++) {
-    const v = db + (<usize>(k * n) << 2);
+    const v = vector(db, idx, k, n);
     let sum = 0;
     for (let i = 0; i < n && sum < best; i++) {
       const d = cell(q, i) - cell(v, i);
@@ -38,12 +43,14 @@ export function nearest(q: usize, db: usize, count: i32, n: i32): i32 {
 }
 
 // Die `limit` naechsten Bilder aufsteigend nach Distanz, stabil bei Gleichstand (shortlist).
-// Schreibt Indizes nach outIdx (Platz fuer limit Eintraege), outDist dient als Arbeitsspeicher.
-export function topK(q: usize, db: usize, count: i32, n: i32, limit: i32, outIdx: usize, outDist: usize): i32 {
+// Schreibt Positionen nach outIdx (Platz fuer limit Eintraege), outDist dient als Arbeitsspeicher.
+export function topK(
+  q: usize, db: usize, idx: usize, count: i32, n: i32, limit: i32, outIdx: usize, outDist: usize,
+): i32 {
   let len = 0;
   for (let k = 0; k < count; k++) {
     const threshold = len < limit ? i32.MAX_VALUE : cell(outDist, len - 1);
-    const v = db + (<usize>(k * n) << 2);
+    const v = vector(db, idx, k, n);
     let sum = 0;
     for (let i = 0; i < n && sum < threshold; i++) {
       const d = cell(q, i) - cell(v, i);
@@ -65,12 +72,12 @@ export function topK(q: usize, db: usize, count: i32, n: i32, limit: i32, outIdx
 }
 
 // Geglaettete Distanz (searchBased): sum |v1-v2| * (1 + |s1-s2|) in f64 wie in JS.
-export function based(q: usize, qs: usize, db: usize, dbs: usize, count: i32, n: i32): i32 {
+export function based(q: usize, qs: usize, db: usize, dbs: usize, idx: usize, count: i32, n: i32): i32 {
   let best: f64 = 9007199254740991; // Number.MAX_SAFE_INTEGER
   let bestIdx = -1;
   for (let k = 0; k < count; k++) {
-    const v = db + (<usize>(k * n) << 2);
-    const s = dbs + (<usize>(k * n) << 3);
+    const v = vector(db, idx, k, n);
+    const s = dbs + (<usize>(cell(idx, k) * n) << 3);
     let sum: f64 = 0;
     for (let i = 0; i < n && sum < best; i++) {
       const dv = <f64>(cell(v, i) - cell(q, i));
@@ -92,7 +99,7 @@ export function rows(q: usize, db: usize, idx: usize, count: i32, dimr: i32, dim
   const n = dimr * dimc;
   for (let row = 0; row < dimr; row++) store<i32>(best + (<usize>row << 2), i32.MAX_VALUE);
   for (let k = 0; k < count; k++) {
-    const v = db + (<usize>(cell(idx, k) * n) << 2);
+    const v = vector(db, idx, k, n);
     for (let row = 0; row < dimr; row++) {
       const bound = cell(best, row);
       const e = cell(ends, row);
@@ -118,7 +125,7 @@ export function cols(q: usize, db: usize, idx: usize, count: i32, dimr: i32, dim
   const n = dimr * dimc;
   for (let col = 0; col < dimc; col++) store<i32>(best + (<usize>col << 2), i32.MAX_VALUE);
   for (let k = 0; k < count; k++) {
-    const v = db + (<usize>(cell(idx, k) * n) << 2);
+    const v = vector(db, idx, k, n);
     for (let col = 0; col < dimc; col++) {
       const bound = cell(best, col);
       const e = cell(ends, col);
@@ -147,7 +154,7 @@ export function quad(
   const n = dimr * dimc;
   for (let i = 0; i < n; i++) store<i32>(best + (<usize>i << 2), i32.MAX_VALUE);
   for (let k = 0; k < count; k++) {
-    const v = db + (<usize>(cell(idx, k) * n) << 2);
+    const v = vector(db, idx, k, n);
     for (let row = 0; row < dimr; row++) {
       const ar = cell(rowStarts, row);
       const er = cell(rowEnds, row);
