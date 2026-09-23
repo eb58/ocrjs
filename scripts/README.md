@@ -9,7 +9,8 @@ bereiten Quelldaten auf oder reproduzieren Messungen.
   `generate/gen-images-from-mnist.js` in PNGs im temporaeren
   Systemverzeichnis um.
 - `npm run gen-dbs` baut mit `generate/gen-dbs.js` die
-  JavaScript-Datenbanken aus `data/imgs` neu auf.
+  Trainingsdatenbanken aus `data/imgs/<datensatz>/train` neu auf
+  (Worker-Pool, jedes Bild einmal dekodiert; optional `-- eb` oder `-- mnist`).
 
 ## Datenpflege und Import
 
