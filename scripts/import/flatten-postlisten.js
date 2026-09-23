@@ -58,7 +58,9 @@ const main = () => {
   });
   const collisions = [...targets.entries()].filter(([, dirs]) => dirs.length > 1);
 
-  console.log(`Bereits flach: ${alreadyFlat.length}, zu verschieben: ${toMove.length}, Namenskollisionen: ${collisions.length}`);
+  console.log(
+    `Bereits flach: ${alreadyFlat.length}, zu verschieben: ${toMove.length}, Namenskollisionen: ${collisions.length}`,
+  );
   if (collisions.length) {
     // Sollte per Konstruktion nicht vorkommen (der volle relative Pfad war vorher
     // eindeutig) - falls doch, z.B. durch Gross-/Kleinschreibungsunterschiede im

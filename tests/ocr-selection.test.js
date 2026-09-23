@@ -17,7 +17,7 @@ jest.mock('../src/img', () => () => {
   return image;
 });
 
-const ocrengine = require('../src/ocr')();
+const ocrengine = require('../src/ocr');
 
 const database = (digit, bestDistance, secondDistance) => {
   const db = Object.assign(
@@ -25,7 +25,7 @@ const database = (digit, bestDistance, secondDistance) => {
     {
       [digit]: [{ imgvec: [Math.sqrt(bestDistance)] }],
       [(digit + 1) % 10]: [{ imgvec: [Math.sqrt(secondDistance)] }],
-    }
+    },
   );
   db.dimr = 1;
   db.dimc = 1;
@@ -45,7 +45,7 @@ test('distance pruning preserves every class minimum and the first equal-distanc
     { name: 'tie', imgvec: [digit, -2] },
   ]);
   expect(ocrengine.findNearestDigit([0, 0], db, 10)).toEqual(
-    db.map((samples, digit) => ({ digit, dist: digit * digit + 4, ...samples[0] }))
+    db.map((samples, digit) => ({ digit, dist: digit * digit + 4, ...samples[0] })),
   );
 });
 

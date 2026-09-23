@@ -1,10 +1,9 @@
 const ocrMnistImageGenerator = (prefix) => {
-  const range = n => [...Array(n).keys()];
+  const range = (n) => [...Array(n).keys()];
 
   const fs = require('fs');
   const os = require('os');
   const path = require('path');
-  const mkdirp = require('mkdirp');
   const PNG = require('pngjs').PNG;
   const createImage = require('../../src/img');
 
@@ -13,14 +12,14 @@ const ocrMnistImageGenerator = (prefix) => {
   const mnistPath = path.resolve(__dirname, '../../data');
   const outputPath = path.join(os.tmpdir(), 'ocrjs', prefix);
 
-  range(10).forEach(digit => mkdirp.sync(path.join(outputPath, `img${digit}`)));
+  range(10).forEach((digit) => fs.mkdirSync(path.join(outputPath, `img${digit}`), { recursive: true }));
 
   const labels = fs.readFileSync(path.join(mnistPath, `${prefix}-labels.idx1-ubyte`)).slice(8); // cf. structure of mnist
   const images = fs.readFileSync(path.join(mnistPath, `${prefix}-images.idx3-ubyte`)).slice(16); // cf. structure of mnist
 
-  const getMnistImage = i => images.slice(i * DIMSQR, (i + 1) * DIMSQR);
+  const getMnistImage = (i) => images.slice(i * DIMSQR, (i + 1) * DIMSQR);
 
-  const createPng = imageData => {
+  const createPng = (imageData) => {
     const png = new PNG({ width: 28, height: 28, filterType: -1 });
     for (let y = 0; y < png.height; y++) {
       for (let x = 0; x < png.width; x++) {

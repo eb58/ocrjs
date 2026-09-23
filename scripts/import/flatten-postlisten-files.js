@@ -60,7 +60,11 @@ const main = () => {
 
   if (DRY_RUN) {
     console.log('Dry-run: es wurde nichts verschoben.');
-    if (plan.length) console.log('Beispiel:', plan[0].moves.map((m) => `${path.basename(m.from)} -> ${m.target}`));
+    if (plan.length)
+      console.log(
+        'Beispiel:',
+        plan[0].moves.map((m) => `${path.basename(m.from)} -> ${m.target}`),
+      );
     return;
   }
 

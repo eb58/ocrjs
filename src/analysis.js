@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const ocrengine = require('./ocr')();
+const ocrengine = require('./ocr');
 
-const { confidence, vote } = ocrengine;
+const { SECURE_CONFIDENCE, confidence, vote } = ocrengine;
 const dataPath = path.join(path.resolve(__dirname, '..'), 'data');
 const datasets = new Set(['eb', 'mnist']);
 const testSets = {
@@ -54,7 +54,7 @@ const finestCellCount = Math.max(...dimensions.map((dim) => dim.split('x').reduc
 const secureThresholdFor = (dimr, dimc, secureThreshold) =>
   secureThreshold * Math.sqrt(finestCellCount / (dimr * dimc));
 
-const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4, options = {}, trace) => {
+const analyzeImage = (file, expected, dataset, databases, secureThreshold = SECURE_CONFIDENCE, options = {}, trace) => {
   const recognize = ocrengine.createRecognizer(file, options);
   const attempts = [];
   const filename = path.basename(file);
@@ -127,7 +127,7 @@ const analyzeImage = (file, expected, dataset, databases, secureThreshold = 2.4,
   return result;
 };
 
-const traceImage = (file, expected, dataset, databases, secureThreshold = 2.4, options = {}) => {
+const traceImage = (file, expected, dataset, databases, secureThreshold = SECURE_CONFIDENCE, options = {}) => {
   const steps = [];
   const result = analyzeImage(file, expected, dataset, databases, secureThreshold, options, steps);
   return { result, steps };

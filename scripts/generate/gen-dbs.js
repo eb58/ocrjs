@@ -1,4 +1,4 @@
-const range = n => [...Array(n).keys()];
+const range = (n) => [...Array(n).keys()];
 const fs = require('fs');
 const path = require('path');
 const PNG = require('pngjs').PNG;
@@ -8,17 +8,18 @@ const projectPath = path.resolve(__dirname, '../..');
 const dataPath = path.join(projectPath, 'data');
 const dbPath = path.join(dataPath, 'dbs');
 
-const isPNG = fname => fname.endsWith('.png')
+const isPNG = (fname) => fname.endsWith('.png');
 
 const genEBDB = (dir, dimr, dimc, computeImage) => {
   const ebdb = { dimr, dimc, dir: path.relative(projectPath, dir) };
 
-  range(10).forEach(digit => {
+  range(10).forEach((digit) => {
     const xdir = path.join(dir, `img${digit}`);
     console.log('working on ' + xdir + ' ...');
-    ebdb[digit] = fs.readdirSync(xdir)
+    ebdb[digit] = fs
+      .readdirSync(xdir)
       .filter(isPNG)
-      .map(name => ({ imgvec: computeImage(xdir, name, dimr, dimc).imgdata, name }));
+      .map((name) => ({ imgvec: computeImage(xdir, name, dimr, dimc).imgdata, name }));
   });
   return ebdb;
 };
@@ -38,13 +39,13 @@ const generateDBsForEBData = (dimr, dimc, traindata, testdata, prefix) => {
       .scaleDown(dimr, dimc);
   fs.writeFileSync(
     path.join(dbPath, `${prefix}-train-${dimstr}.js`),
-    'module.exports = ' + JSON.stringify(genEBDB(traindata, dimr, dimc, computeImage))
+    'module.exports = ' + JSON.stringify(genEBDB(traindata, dimr, dimc, computeImage)),
   );
 
   // generate test db
   fs.writeFileSync(
     path.join(dbPath, `${prefix}-test-${dimstr}.js`),
-    'module.exports = ' + JSON.stringify(genEBDB(testdata, dimr, dimc, computeImage))
+    'module.exports = ' + JSON.stringify(genEBDB(testdata, dimr, dimc, computeImage)),
   );
 };
 

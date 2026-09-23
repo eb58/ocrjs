@@ -12,9 +12,9 @@
     "gen-dbs": "node scripts/generate/gen-dbs",
     "gen-images-from-mnist": "node scripts/generate/gen-images-from-mnist",
     "prepare": "git config core.hooksPath .githooks",
-    "lint": "eslint src tests",
-    "format": "prettier --write src tests",
-    "format:check": "prettier --check src tests",
+    "lint": "eslint .",
+    "format": "prettier --write src tests \"scripts/**/*.js\" visual-tests eslint.config.js",
+    "format:check": "prettier --check src tests \"scripts/**/*.js\" visual-tests eslint.config.js",
     "test": "jest",
     "testWatch": "jest --watch",
     "visual-test": "node --watch src/visual-test-server.js"
@@ -24,15 +24,15 @@
     "eb"
   ],
   "dependencies": {
-    "mkdirp": "^3.0.1",
     "pngjs": "^7.0.0"
   },
   "devDependencies": {
-    "eslint": "^7.32.0",
-    "eslint-config-prettier": "6.11.0",
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.12.0",
     "jest": "^30.5.1",
     "playwright": "^1.63.0",
-    "prettier": "^2.8.8",
-    "watch": "^0.13.0"
+    "prettier": "^3.9.9"
   }
 }

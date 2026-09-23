@@ -17,7 +17,6 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
-const mkdirp = require('mkdirp');
 const { PNG } = require('pngjs');
 const createImage = require('../../src/img');
 
@@ -169,13 +168,14 @@ const parseFields = (attContent) => {
   return fields;
 };
 
-const loadProcessedLog = () => new Set(fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').split('\n').filter(Boolean) : []);
+const loadProcessedLog = () =>
+  new Set(fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').split('\n').filter(Boolean) : []);
 const appendLog = (relPath) => fs.appendFileSync(logFile, `${relPath}\n`);
 const range = (n) => [...Array(n).keys()];
 
 const main = () => {
   const ffmpeg = findFfmpeg();
-  range(10).forEach((digit) => mkdirp.sync(path.join(testDir, `img${digit}`)));
+  range(10).forEach((digit) => fs.mkdirSync(path.join(testDir, `img${digit}`), { recursive: true }));
 
   const attFiles = fs
     .readdirSync(ROOT)
@@ -184,7 +184,9 @@ const main = () => {
 
   const processed = loadProcessedLog();
   const toProcess = attFiles.filter((f) => !processed.has(path.basename(f))).slice(0, LIMIT);
-  console.log(`${attFiles.length} Kadmos-Formulare gefunden, ${toProcess.length} neu zu verarbeiten${DRY_RUN ? ' (dry-run)' : ''}.`);
+  console.log(
+    `${attFiles.length} Kadmos-Formulare gefunden, ${toProcess.length} neu zu verarbeiten${DRY_RUN ? ' (dry-run)' : ''}.`,
+  );
 
   const stats = { forms: 0, skippedForms: 0, fieldsResolved: 0, fieldsUnresolved: 0, digitsWritten: Array(10).fill(0) };
 
@@ -200,7 +202,15 @@ const main = () => {
       pngFile = tifToPng(ffmpeg, tifFile);
       const source = PNG.sync.read(fs.readFileSync(pngFile));
       const page = createImage().frompng(source).adjustBW();
-      const region = cropRect(page.imgdata, source.width, source.height, FIELD_REGION.x0, FIELD_REGION.y0, FIELD_REGION.x1, FIELD_REGION.y1);
+      const region = cropRect(
+        page.imgdata,
+        source.width,
+        source.height,
+        FIELD_REGION.x0,
+        FIELD_REGION.y0,
+        FIELD_REGION.x1,
+        FIELD_REGION.y1,
+      );
       region.despeckle();
 
       const rows = findBands(rowCounts(region), ROW_MIN_GAP, ROW_MIN_HEIGHT);
@@ -227,7 +237,10 @@ const main = () => {
           stats.fieldsUnresolved++;
           return;
         }
-        const positions = [...blobsA.map((b) => ({ col: b, row: rowA })), ...blobsB.map((b) => ({ col: b, row: rowB }))];
+        const positions = [
+          ...blobsA.map((b) => ({ col: b, row: rowA })),
+          ...blobsB.map((b) => ({ col: b, row: rowB })),
+        ];
 
         stats.fieldsResolved++;
         positions.forEach(({ col, row }, digitIdx) => {
@@ -239,7 +252,7 @@ const main = () => {
             Math.max(0, col.min - GLYPH_MARGIN),
             Math.max(0, row.min - GLYPH_MARGIN),
             Math.min(region.w, col.max + GLYPH_MARGIN),
-            Math.min(region.h, row.max + GLYPH_MARGIN)
+            Math.min(region.h, row.max + GLYPH_MARGIN),
           );
           const id = crypto.createHash('md5').update(`${base}-${fieldIdx}`).digest('hex').slice(0, 10);
           const name = `kad-${id}-d${digitIdx}.png`;
@@ -260,8 +273,12 @@ const main = () => {
 
   console.log('\nFertig.');
   console.log(`Formulare verarbeitet: ${stats.forms}, uebersprungen: ${stats.skippedForms}`);
-  console.log(`Felder aufgeloest: ${stats.fieldsResolved}, nicht aufloesbar (>1 unsichere Ziffer o.ae.): ${stats.fieldsUnresolved}`);
-  console.log(`Ziffern geschrieben: ${stats.digitsWritten.reduce((a, b) => a + b, 0)} (${stats.digitsWritten.map((n, d) => `${d}:${n}`).join(', ')})`);
+  console.log(
+    `Felder aufgeloest: ${stats.fieldsResolved}, nicht aufloesbar (>1 unsichere Ziffer o.ae.): ${stats.fieldsUnresolved}`,
+  );
+  console.log(
+    `Ziffern geschrieben: ${stats.digitsWritten.reduce((a, b) => a + b, 0)} (${stats.digitsWritten.map((n, d) => `${d}:${n}`).join(', ')})`,
+  );
 };
 
 main();

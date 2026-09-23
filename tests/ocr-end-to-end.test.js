@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const ocrengine = require('../src/ocr')();
+const ocrengine = require('../src/ocr');
 const { analyzeImage, loadDatabases, recognitionOptionsFor } = require('../src/analysis');
 
 const fixtureDir = path.join(__dirname, 'fixtures');
@@ -13,7 +13,7 @@ const fixtures = fs
 test.each(fixtures)('priority ordering preserves every candidate field for %s', (filename) => {
   const file = path.join(fixtureDir, filename);
   expect(ocrengine.createRecognizer(file, { priorityCount: 32 })(database)).toEqual(
-    ocrengine.createRecognizer(file)(database)
+    ocrengine.createRecognizer(file)(database),
   );
 });
 

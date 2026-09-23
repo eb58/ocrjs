@@ -19,7 +19,7 @@ parentPort.on('message', ({ id, tasks, dataset, mode, searchMode, secureThreshol
         dataset,
         databases,
         secureThreshold,
-        recognitionOptionsFor(dataset, searchMode)
+        recognitionOptionsFor(dataset, searchMode),
       ),
     }));
     parentPort.postMessage({ id, results });

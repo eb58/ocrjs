@@ -18,7 +18,6 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
-const mkdirp = require('mkdirp');
 const { PNG } = require('pngjs');
 const createImage = require('../../src/img');
 
@@ -162,18 +161,21 @@ const parseFieldLines = (attContent) =>
     .map((line, idx) => ({ line, idx, m: line.match(/S=([0-9+]{12});/) }))
     .filter((x) => x.m);
 
-const loadProcessedLog = () => new Set(fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').split('\n').filter(Boolean) : []);
+const loadProcessedLog = () =>
+  new Set(fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').split('\n').filter(Boolean) : []);
 const appendLog = (relPath) => fs.appendFileSync(logFile, `${relPath}\n`);
 const range = (n) => [...Array(n).keys()];
 
 const main = () => {
   const ffmpeg = findFfmpeg();
-  range(10).forEach((digit) => mkdirp.sync(path.join(testDir, `img${digit}`)));
+  range(10).forEach((digit) => fs.mkdirSync(path.join(testDir, `img${digit}`), { recursive: true }));
 
   const attFiles = fs.readdirSync(ROOT).filter((n) => /\.att$/i.test(n));
   const processed = loadProcessedLog();
   const toProcess = attFiles.filter((f) => !processed.has(f)).slice(0, LIMIT);
-  console.log(`${attFiles.length} .att-Dateien gefunden, ${toProcess.length} neu zu verarbeiten${DRY_RUN ? ' (dry-run)' : ''}.`);
+  console.log(
+    `${attFiles.length} .att-Dateien gefunden, ${toProcess.length} neu zu verarbeiten${DRY_RUN ? ' (dry-run)' : ''}.`,
+  );
 
   const stats = {
     forms: 0,
@@ -214,7 +216,15 @@ const main = () => {
       pngFile = tifToPng(ffmpeg, tifFile);
       const source = PNG.sync.read(fs.readFileSync(pngFile));
       const page = createImage().frompng(source).adjustBW();
-      const region = cropRect(page.imgdata, source.width, source.height, FIELD_REGION.x0, FIELD_REGION.y0, FIELD_REGION.x1, FIELD_REGION.y1);
+      const region = cropRect(
+        page.imgdata,
+        source.width,
+        source.height,
+        FIELD_REGION.x0,
+        FIELD_REGION.y0,
+        FIELD_REGION.x1,
+        FIELD_REGION.y1,
+      );
       region.despeckle();
 
       const rows = findBands(rowCounts(region), ROW_MIN_GAP, ROW_MIN_HEIGHT);
@@ -236,7 +246,10 @@ const main = () => {
         const blobsA = blobsOf(rowA);
         const blobsB = blobsOf(rowB);
         if (blobsA.length !== DIGITS_PER_ROW || blobsB.length !== DIGITS_PER_ROW) return;
-        const positions = [...blobsA.map((b) => ({ col: b, row: rowA })), ...blobsB.map((b) => ({ col: b, row: rowB }))];
+        const positions = [
+          ...blobsA.map((b) => ({ col: b, row: rowA })),
+          ...blobsB.map((b) => ({ col: b, row: rowB })),
+        ];
 
         positions.forEach(({ col, row }, digitIdx) => {
           const digit = digits[digitIdx];
@@ -248,7 +261,7 @@ const main = () => {
             Math.max(0, col.min - GLYPH_MARGIN),
             Math.max(0, row.min - GLYPH_MARGIN),
             Math.min(region.w, col.max + GLYPH_MARGIN),
-            Math.min(region.h, row.max + GLYPH_MARGIN)
+            Math.min(region.h, row.max + GLYPH_MARGIN),
           );
           const id = crypto.createHash('md5').update(`${attName}-${fieldIdx}`).digest('hex').slice(0, 10);
           const name = `gt-${id}-d${digitIdx}.png`;
@@ -269,10 +282,16 @@ const main = () => {
   });
 
   console.log('\nFertig.');
-  console.log(`Formulare verarbeitet: ${stats.forms}, uebersprungen (Zeilenanzahl passt nicht): ${stats.skippedRowMismatch}, uebersprungen (Fehler): ${stats.skippedOther}`);
+  console.log(
+    `Formulare verarbeitet: ${stats.forms}, uebersprungen (Zeilenanzahl passt nicht): ${stats.skippedRowMismatch}, uebersprungen (Fehler): ${stats.skippedOther}`,
+  );
   console.log(`Felder gesamt: ${stats.fieldsTotal}, davon vollstaendig bekannt: ${stats.fieldsFullyKnown}`);
-  console.log(`Bekannte Ziffern (aus .att): ${stats.digitsKnown}, tatsaechlich extrahiert (Bild passte): ${stats.digitsExtracted}`);
-  console.log(`Ziffern geschrieben: ${stats.digitsExtracted} (${stats.digitsWritten.map((n, d) => `${d}:${n}`).join(', ')})`);
+  console.log(
+    `Bekannte Ziffern (aus .att): ${stats.digitsKnown}, tatsaechlich extrahiert (Bild passte): ${stats.digitsExtracted}`,
+  );
+  console.log(
+    `Ziffern geschrieben: ${stats.digitsExtracted} (${stats.digitsWritten.map((n, d) => `${d}:${n}`).join(', ')})`,
+  );
 };
 
 main();

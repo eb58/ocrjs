@@ -76,7 +76,7 @@ test('cropGlyphInner crops a glyph around the image centre', () => {
   const image = createImage(
     [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
     5,
-    5
+    5,
   ).cropGlyphInner();
 
   expect(image.imgdata).toEqual(Array(9).fill(1));
@@ -194,6 +194,6 @@ test('prepare can discard disconnected marks before cropping the glyph', () => {
 
   expect(complete).not.toEqual(cleaned);
   expect(cleaned.reduce((sum, pixel) => sum + pixel, 0)).toBeGreaterThan(
-    complete.reduce((sum, pixel) => sum + pixel, 0)
+    complete.reduce((sum, pixel) => sum + pixel, 0),
   );
 });

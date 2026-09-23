@@ -9,7 +9,7 @@ const cascadeAccuracy = async (dataset) => {
   // Direkt auf stderr, weil Jest console.log im Parallellauf ohne --verbose verschluckt.
   process.stderr.write(
     `\nKaskade ${dataset}: ${(accuracy * 100).toFixed(2)}% korrekt ` +
-      `(${correct}/${results.length}, ${results.length - correct} Fehler, ${(durationMs / 1000).toFixed(1)}s)\n`
+      `(${correct}/${results.length}, ${results.length - correct} Fehler, ${(durationMs / 1000).toFixed(1)}s)\n`,
   );
   return accuracy;
 };

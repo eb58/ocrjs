@@ -17,7 +17,7 @@ test('contains two real examples of every digit', () => {
 
   expect(fixtureNames).toHaveLength(20);
   expect(Array.from({ length: 10 }, (_, digit) => digits.filter((value) => value === digit).length)).toEqual(
-    Array(10).fill(2)
+    Array(10).fill(2),
   );
 });
 

@@ -52,7 +52,7 @@ const elements = {
 const storedSettings = () => {
   try {
     return JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
-  } catch (error) {
+  } catch {
     return {};
   }
 };
@@ -72,7 +72,7 @@ const restoreControl = (element, value) => {
 const restoreSettings = () => {
   const settings = storedSettings();
   ['dataset', 'testSet', 'mode', 'searchMode', 'limit', 'offset', 'threshold', 'digit', 'sort'].forEach((name) =>
-    restoreControl(elements[name], settings[name])
+    restoreControl(elements[name], settings[name]),
   );
   const statusTiles = [...document.querySelectorAll('.summary article[data-status]')];
   const statusTile = statusTiles.find((tile) => tile.dataset.status === settings.status);
@@ -96,9 +96,9 @@ const saveSettings = () => {
         sort: elements.sort.value,
         status: state.status,
         threshold: elements.threshold.value,
-      })
+      }),
     );
-  } catch (error) {
+  } catch {
     // Der Prüfstand bleibt auch bei deaktiviertem localStorage benutzbar.
   }
 };
@@ -166,10 +166,14 @@ const buildCandidate = (candidate, index) => {
     src: candidate.image || MISSING_TRAINING_IMAGE,
     alt: candidate.image ? `Trainingsbild für Ziffer ${candidate.digit}` : 'Kein Trainingsbild vorhanden',
   });
-  image.addEventListener('error', () => {
-    image.src = MISSING_TRAINING_IMAGE;
-    image.alt = 'Kein Trainingsbild vorhanden';
-  }, { once: true });
+  image.addEventListener(
+    'error',
+    () => {
+      image.src = MISSING_TRAINING_IMAGE;
+      image.alt = 'Kein Trainingsbild vorhanden';
+    },
+    { once: true },
+  );
   article.append(
     image,
     el(
@@ -177,8 +181,8 @@ const buildCandidate = (candidate, index) => {
       {},
       el('small', { textContent: `Kandidat ${index + 1}` }),
       el('strong', { textContent: candidate.digit }),
-      el('span', { textContent: `Distanz ${candidate.distance}` })
-    )
+      el('span', { textContent: `Distanz ${candidate.distance}` }),
+    ),
   );
   return article;
 };
@@ -195,14 +199,14 @@ const showDetails = (result) => {
         'figure',
         {},
         el('img', { src: result.image, alt: `Testbild, erwartet ${result.expected}` }),
-        el('figcaption', { textContent: 'Original' })
+        el('figcaption', { textContent: 'Original' }),
       ),
       el(
         'figure',
         { className: 'query-grid' },
         el('img', { src: result.queryImage, alt: `Verglichenes Raster, ${result.dimension}` }),
-        el('figcaption', { textContent: `Raster ${result.dimension}` })
-      )
+        el('figcaption', { textContent: `Raster ${result.dimension}` }),
+      ),
     ),
     el(
       'div',
@@ -213,14 +217,14 @@ const showDetails = (result) => {
         {},
         document.createTextNode(`${result.expected} `),
         el('span', { textContent: '→' }),
-        document.createTextNode(` ${result.prediction}`)
+        document.createTextNode(` ${result.prediction}`),
       ),
       el('p', {
         className: `detail-status ${result.correct ? 'ok' : 'bad'}`,
         textContent: result.correct ? 'Richtig erkannt' : 'Falsch erkannt',
       }),
-      el('p', { className: 'filename', textContent: result.filename })
-    )
+      el('p', { className: 'filename', textContent: result.filename }),
+    ),
   );
   const candidates = el('div', { className: 'candidates' }, ...result.candidates.map(buildCandidate));
   const animation = el('section', { className: 'recognition-animation', hidden: true });
@@ -235,7 +239,7 @@ const showDetails = (result) => {
     el('div', { className: 'detail-actions' }, animateButton),
     animation,
     el('h3', { textContent: 'Ähnlichste Trainingsbilder' }),
-    candidates
+    candidates,
   );
   elements.details.showModal();
 };
@@ -250,45 +254,54 @@ const renderTraceStep = (container, step, result, index, total) => {
   const progress = el(
     'div',
     { className: 'trace-progress', 'aria-label': `Schritt ${index + 1} von ${total}` },
-    ...Array.from({ length: total }, (_, position) => el('i', { className: position <= index ? 'active' : '' }))
+    ...Array.from({ length: total }, (_, position) => el('i', { className: position <= index ? 'active' : '' })),
   );
-  const copy = step.type === 'fallback'
-    ? `Konfidenz unter ${step.threshold.toFixed(2)}: Die Vorauswahl wird verworfen und alle Trainingsbilder werden geprüft.`
-    : step.type === 'vote'
-      ? `Kein Raster war sicher genug. Die Einzelergebnisse stimmen gemeinsam für Ziffer ${step.prediction}.`
-      : `Konfidenz ${step.confidence.toFixed(2)} · Schwelle ${step.threshold.toFixed(2)} · ${
-        step.accepted ? 'Ergebnis akzeptiert' : 'weiter zum nächsten Raster'
-      }`;
+  const copy =
+    step.type === 'fallback'
+      ? `Konfidenz unter ${step.threshold.toFixed(2)}: Die Vorauswahl wird verworfen und alle Trainingsbilder werden geprüft.`
+      : step.type === 'vote'
+        ? `Kein Raster war sicher genug. Die Einzelergebnisse stimmen gemeinsam für Ziffer ${step.prediction}.`
+        : `Konfidenz ${step.confidence.toFixed(2)} · Schwelle ${step.threshold.toFixed(2)} · ${
+            step.accepted ? 'Ergebnis akzeptiert' : 'weiter zum nächsten Raster'
+          }`;
   const image = el('img', {
     src: step.queryImage || result.queryImage,
     alt: step.dimension ? `Verglichenes Raster ${step.dimension}` : 'Verglichenes Raster',
   });
-  const candidateList = step.type === 'vote'
-    ? el(
-      'div',
-      { className: 'trace-votes' },
-      el('strong', { textContent: 'Abstimmung je Raster' }),
-      ...step.votes.map((vote) => el(
-        'span',
-        {},
-        el('b', { textContent: vote.dimension }),
-        el('b', { textContent: vote.digit === undefined ? '–' : `Ziffer ${vote.digit}` }),
-        el('small', { textContent: `Konfidenz ${vote.confidence.toFixed(2)}` })
-      )),
-      el('strong', { textContent: `Ergebnis: Ziffer ${step.prediction}` })
-    )
-    : step.candidates?.length
-      ? el('div', { className: 'trace-candidates' }, ...step.candidates.map(buildCandidate))
-      : el('div', { className: 'trace-fallback-icon', textContent: '128 → alle' });
+  const candidateList =
+    step.type === 'vote'
+      ? el(
+          'div',
+          { className: 'trace-votes' },
+          el('strong', { textContent: 'Abstimmung je Raster' }),
+          ...step.votes.map((vote) =>
+            el(
+              'span',
+              {},
+              el('b', { textContent: vote.dimension }),
+              el('b', { textContent: vote.digit === undefined ? '–' : `Ziffer ${vote.digit}` }),
+              el('small', { textContent: `Konfidenz ${vote.confidence.toFixed(2)}` }),
+            ),
+          ),
+          el('strong', { textContent: `Ergebnis: Ziffer ${step.prediction}` }),
+        )
+      : step.candidates?.length
+        ? el('div', { className: 'trace-candidates' }, ...step.candidates.map(buildCandidate))
+        : el('div', { className: 'trace-fallback-icon', textContent: '128 → alle' });
   container.replaceChildren(
     progress,
     el(
       'div',
       { className: `trace-stage trace-${step.type}` },
       el('figure', {}, image, el('figcaption', { textContent: traceTitle(step) })),
-      el('div', { className: 'trace-explanation' }, el('h3', { textContent: traceTitle(step) }), el('p', { textContent: copy }))
+      el(
+        'div',
+        { className: 'trace-explanation' },
+        el('h3', { textContent: traceTitle(step) }),
+        el('p', { textContent: copy }),
+      ),
     ),
-    candidateList
+    candidateList,
   );
 };
 

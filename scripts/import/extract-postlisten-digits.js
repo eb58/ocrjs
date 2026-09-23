@@ -15,10 +15,9 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
-const mkdirp = require('mkdirp');
 const { PNG } = require('pngjs');
 const createImage = require('../../src/img');
-const ocrengine = require('../../src/ocr')();
+const ocrengine = require('../../src/ocr');
 const { loadDatabases } = require('../../src/analysis');
 
 const args = process.argv.slice(2);
@@ -55,7 +54,9 @@ const findFfmpeg = () => {
     execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' });
     return 'ffmpeg';
   } catch {
-    throw new Error('ffmpeg wurde nicht gefunden (wird zur TIFF->PNG-Konvertierung benoetigt). Bitte installieren und in PATH aufnehmen.');
+    throw new Error(
+      'ffmpeg wurde nicht gefunden (wird zur TIFF->PNG-Konvertierung benoetigt). Bitte installieren und in PATH aufnehmen.',
+    );
   }
 };
 
@@ -187,19 +188,22 @@ const writePng = (img, file) => {
   fs.writeFileSync(file, PNG.sync.write(png));
 };
 
-const loadProcessedLog = () => new Set(fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').split('\n').filter(Boolean) : []);
+const loadProcessedLog = () =>
+  new Set(fs.existsSync(logFile) ? fs.readFileSync(logFile, 'utf8').split('\n').filter(Boolean) : []);
 const appendLog = (relPath) => fs.appendFileSync(logFile, `${relPath}\n`);
 
 const main = () => {
   const ffmpeg = findFfmpeg();
   const dbs = loadDatabases('eb', 'auto').map((entry) => entry.data);
-  range(10).forEach((digit) => mkdirp.sync(path.join(testDir, `img${digit}`)));
-  mkdirp.sync(reviewDir);
+  range(10).forEach((digit) => fs.mkdirSync(path.join(testDir, `img${digit}`), { recursive: true }));
+  fs.mkdirSync(reviewDir, { recursive: true });
 
   const processed = loadProcessedLog();
   const allTifs = findTifFiles(ROOT).filter((file) => !processed.has(path.relative(ROOT, file)));
   const tifs = allTifs.slice(0, LIMIT);
-  console.log(`${allTifs.length} neue Formulare gefunden, verarbeite ${tifs.length}${DRY_RUN ? ' (dry-run, es wird nichts geschrieben)' : ''}.`);
+  console.log(
+    `${allTifs.length} neue Formulare gefunden, verarbeite ${tifs.length}${DRY_RUN ? ' (dry-run, es wird nichts geschrieben)' : ''}.`,
+  );
 
   const stats = { accepted: Array(10).fill(0), review: 0, skippedForms: 0, forms: 0 };
 
@@ -210,7 +214,15 @@ const main = () => {
       pngFile = tifToPng(ffmpeg, tifFile);
       const source = PNG.sync.read(fs.readFileSync(pngFile));
       const page = createImage().frompng(source).adjustBW();
-      const region = cropRect(page.imgdata, source.width, source.height, ROW_REGION.x0, ROW_REGION.y0, ROW_REGION.x1, ROW_REGION.y1);
+      const region = cropRect(
+        page.imgdata,
+        source.width,
+        source.height,
+        ROW_REGION.x0,
+        ROW_REGION.y0,
+        ROW_REGION.x1,
+        ROW_REGION.y1,
+      );
       removeRuledLines(region);
       region.despeckle();
 
@@ -232,7 +244,7 @@ const main = () => {
             Math.max(0, col.min - GLYPH_MARGIN),
             Math.max(0, row.min - GLYPH_MARGIN),
             Math.min(region.w, col.max + GLYPH_MARGIN),
-            Math.min(region.h, row.max + GLYPH_MARGIN)
+            Math.min(region.h, row.max + GLYPH_MARGIN),
           );
           const glyphFile = path.join(os.tmpdir(), `plg-${crypto.randomBytes(8).toString('hex')}.png`);
           writePng(glyph, glyphFile);
@@ -268,8 +280,12 @@ const main = () => {
   });
 
   console.log('\nFertig.');
-  console.log(`Formulare verarbeitet: ${stats.forms}, uebersprungen (Zeilenlayout unerwartet/Fehler): ${stats.skippedForms}`);
-  console.log(`In eb/test uebernommen: ${stats.accepted.reduce((a, b) => a + b, 0)} (${stats.accepted.map((n, d) => `${d}:${n}`).join(', ')})`);
+  console.log(
+    `Formulare verarbeitet: ${stats.forms}, uebersprungen (Zeilenlayout unerwartet/Fehler): ${stats.skippedForms}`,
+  );
+  console.log(
+    `In eb/test uebernommen: ${stats.accepted.reduce((a, b) => a + b, 0)} (${stats.accepted.map((n, d) => `${d}:${n}`).join(', ')})`,
+  );
   console.log(`Zur manuellen Pruefung in eb/review: ${stats.review}`);
 };
 
