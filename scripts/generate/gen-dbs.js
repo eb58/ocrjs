@@ -57,7 +57,11 @@ const generate = async (datasets) => {
   const jobs = datasets.flatMap((dataset) =>
     Array.from({ length: 10 }, (_, digit) => {
       const dir = path.join(dataPath, 'imgs', dataset, 'train', `img${digit}`);
-      const names = fs.readdirSync(dir).filter((name) => name.endsWith('.png'));
+      // Explizit sortiert: readdirSync liefert die Reihenfolge des Dateisystems (unter Linux beliebig).
+      const names = fs
+        .readdirSync(dir)
+        .filter((name) => name.endsWith('.png'))
+        .sort();
       return chunks(names).map((part) => ({ dataset, digit, dir, names: part }));
     }).flat(),
   );

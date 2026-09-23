@@ -11,6 +11,10 @@ bereiten Quelldaten auf oder reproduzieren Messungen.
 - `npm run gen-dbs` baut mit `generate/gen-dbs.js` die
   Trainingsdatenbanken aus `data/imgs/<datensatz>/train` neu auf
   (Worker-Pool, jedes Bild einmal dekodiert; optional `-- eb` oder `-- mnist`).
+- `generate/sort-train-images.js` benennt die Trainingsbilder mit einem Rangpräfix
+  (`00042__<name>.png`) um, sodass die häufigsten nächsten Nachbarn zuerst stehen und
+  `gen-dbs` sie in dieser Reihenfolge übernimmt. Vorher und nachher `npm run gen-dbs`;
+  `rename-log.json` im jeweiligen `train`-Ordner hält die alten Namen, `--undo` benennt zurück.
 
 ## Datenpflege und Import
 
