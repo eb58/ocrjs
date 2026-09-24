@@ -22,6 +22,9 @@
 * {
   box-sizing: border-box;
 }
+html {
+  zoom: 0.8;
+}
 body {
   margin: 0;
   min-width: 320px;
@@ -94,6 +97,7 @@ main {
   border-bottom: 1px solid var(--line);
 }
 label {
+  min-width: 0;
   display: grid;
   gap: 8px;
   color: var(--muted);
@@ -111,6 +115,8 @@ select {
   background: var(--panel);
   font-size: 0.95rem;
   text-transform: none;
+  width: 100%;
+  min-width: 0;
 }
 input:focus,
 select:focus,
