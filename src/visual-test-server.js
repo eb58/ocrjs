@@ -115,8 +115,15 @@ const sendQueryGrid = (response, file, dimension) => {
     response.end('Not found');
     return;
   }
+  // Gleiche Vorverarbeitung wie die Primaersicht in ocr.js, sonst zeigt das Raster z.B. entfernte Flecken.
   const source = PNG.sync.read(fs.readFileSync(file));
-  const imgdata = img().frompng(source).adjustBW().despeckle().cropGlyph().scaleDown(dimr, dimc).imgdata;
+  const imgdata = img()
+    .frompng(source)
+    .adjustBW()
+    .despeckle()
+    .extractGlyphFarFromBiggest(15)
+    .cropGlyph()
+    .scaleDown(dimr, dimc).imgdata;
   response.writeHead(200, { 'Cache-Control': 'no-cache', 'Content-Type': 'image/png' });
   response.end(gridToPngBuffer(imgdata, dimr, dimc));
 };
