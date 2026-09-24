@@ -42,6 +42,7 @@ const elements = {
   resultCount: $('#resultCount'),
   run: $('#runButton'),
   reset: $('#resetButton'),
+  genDbs: $('#genDbsButton'),
   searchMode: $('#searchMode'),
   sort: $('#sort'),
   threshold: $('#threshold'),
@@ -185,7 +186,37 @@ const buildCandidate = (candidate, index) => {
       el('span', { textContent: `Distanz ${candidate.distance}` }),
     ),
   );
+  if (candidate.name) article.append(buildTrash(candidate, article));
   return article;
+};
+
+const TRASH_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>';
+
+// Sortiert das Trainingsbild eines Kandidaten aus; der Server entfernt es auch aus den DBs.
+const buildTrash = (candidate, article) => {
+  const trash = el('button', {
+    className: 'candidate-trash',
+    type: 'button',
+    title: `Trainingsbild ${candidate.name} aussortieren`,
+    innerHTML: TRASH_ICON,
+  });
+  trash.addEventListener('click', async () => {
+    if (!confirm(`Trainingsbild ${candidate.name} (Ziffer ${candidate.digit}) aussortieren?`)) return;
+    trash.disabled = true;
+    const params = new URLSearchParams({
+      dataset: currentConfig().dataset,
+      digit: candidate.digit,
+      file: candidate.name,
+    });
+    const response = await fetch(`/api/remove-train?${params}`, { method: 'POST' });
+    const payload = await response.json();
+    trash.disabled = response.ok;
+    article.classList.toggle('removed', response.ok);
+    trash.title = response.ok ? 'Aussortiert' : payload.error || 'Aussortieren fehlgeschlagen';
+    if (!response.ok) alert(trash.title);
+  });
+  return trash;
 };
 
 const currentConfig = () => state.runConfig || { dataset: elements.dataset.value, testSet: elements.testSet.value };
@@ -570,6 +601,25 @@ const exportCsv = () => {
   URL.revokeObjectURL(link.href);
 };
 
+// Laeuft auf dem Server als eigener Prozess; danach rechnen neue Laeufe mit den frischen DBs.
+const regenerateDatabases = async () => {
+  const { dataset } = elements;
+  if (!confirm(`Trainings-DB ${dataset.value.toUpperCase()} neu generieren?`)) return;
+  const label = elements.genDbs.textContent;
+  elements.genDbs.disabled = true;
+  elements.genDbs.textContent = 'Generiere DBs …';
+  try {
+    const response = await fetch(`/api/gen-dbs?${new URLSearchParams({ dataset: dataset.value })}`, { method: 'POST' });
+    const payload = await response.json();
+    alert(response.ok ? `DBs neu generiert: ${payload.output}` : payload.error || 'Generieren fehlgeschlagen');
+  } catch (error) {
+    alert(`Generieren fehlgeschlagen: ${error.message}`);
+  } finally {
+    elements.genDbs.disabled = false;
+    elements.genDbs.textContent = label;
+  }
+};
+
 const resetAndRender = () => {
   state.visible = PAGE_SIZE;
   renderCards();
@@ -577,6 +627,7 @@ const resetAndRender = () => {
 
 elements.run.addEventListener('click', run);
 elements.reset.addEventListener('click', resetSettings);
+elements.genDbs.addEventListener('click', regenerateDatabases);
 elements.export.addEventListener('click', exportCsv);
 elements.more.addEventListener('click', () => {
   state.visible += PAGE_SIZE;

@@ -7,7 +7,9 @@ const {
   createServer,
   normalizePng,
   planAnalysis,
+  regenerateDatabases,
   relabelImage,
+  removeTrainingImage,
   requestParams,
   runAnalysis,
   stopWorkers,
@@ -345,5 +347,42 @@ describe('relabelImage - falsch einsortierte Testbilder verschieben', () => {
     } finally {
       await new Promise((resolve) => server.close(resolve));
     }
+  });
+});
+
+describe('removeTrainingImage - Trainingsbilder aussortieren', () => {
+  const name = '__remove-train-test.png';
+  const trainFile = path.join(__dirname, '..', 'data', 'imgs', 'eb', 'train', 'img4', name);
+  const removedFile = path.join(__dirname, '..', 'data', 'imgs', 'eb', 'removed', 'train', 'img4', name);
+  const cleanup = () => [trainFile, removedFile].forEach((file) => fs.rmSync(file, { force: true }));
+
+  beforeEach(() => {
+    cleanup();
+    fs.copyFileSync(listTasks({ dataset: 'eb', limit: 1, offset: 0 })[0].file, trainFile);
+  });
+  afterAll(cleanup);
+
+  test('moves the image to removed/train and leaves the DBs alone when it is not in them', () => {
+    expect(removeTrainingImage({ dataset: 'eb', digit: 4, filename: name })).toEqual({
+      moved: `imgs/eb/removed/train/img4/${name}`,
+      databases: [],
+    });
+    expect(fs.existsSync(trainFile)).toBe(false);
+    expect(fs.existsSync(removedFile)).toBe(true);
+  });
+
+  test('refuses invalid requests and never overwrites', () => {
+    expect(() => removeTrainingImage({ dataset: 'eb', digit: 10, filename: name })).toThrow('Ungueltige Ziffer');
+    expect(() => removeTrainingImage({ dataset: 'eb', digit: 3, filename: name })).toThrow('nicht gefunden');
+    expect(() => removeTrainingImage({ dataset: 'eb', digit: 4, filename: `../img3/${name}` })).not.toThrow();
+    fs.copyFileSync(removedFile, trainFile);
+    expect(() => removeTrainingImage({ dataset: 'eb', digit: 4, filename: name })).toThrow('schon ein Bild');
+    expect(fs.existsSync(trainFile)).toBe(true);
+  });
+});
+
+describe('regenerateDatabases', () => {
+  test('rejects unknown datasets instead of throwing synchronously', async () => {
+    await expect(regenerateDatabases({ dataset: 'xx' })).rejects.toThrow('Unbekannter Datensatz');
   });
 });

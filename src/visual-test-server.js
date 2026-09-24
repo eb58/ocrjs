@@ -3,6 +3,7 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 const { URL } = require('url');
+const { execFile } = require('child_process');
 const { Worker } = require('worker_threads');
 const { PNG } = require('pngjs');
 const img = require('./img');
@@ -154,8 +155,15 @@ const settle = (entry, id, settleChunk) => {
   pendingChunks.delete(id);
   entry.busy = false;
   entry.worker.unref();
+  if (!poolWorkers.includes(entry)) entry.worker.terminate();
   settleChunk(pending);
   dispatch();
+};
+
+// Nach einer DB-Aenderung: laufende Chunks duerfen fertig werden, neue gehen an einen frischen Pool.
+const retirePool = () => {
+  poolWorkers.splice(0).forEach((entry) => !entry.busy && entry.worker.terminate());
+  if (chunkQueue.length) (ensurePool(), dispatch());
 };
 
 const ensurePool = () => {
@@ -170,7 +178,7 @@ const ensurePool = () => {
     worker.on('error', (error) => {
       // Abgestuerzten Worker aussortieren, sonst bekaeme er weiter Chunks zugeteilt.
       // Stirbt der letzte, legt ensurePool() beim naechsten Request einen neuen Pool an.
-      poolWorkers.splice(poolWorkers.indexOf(entry), 1);
+      if (poolWorkers.includes(entry)) poolWorkers.splice(poolWorkers.indexOf(entry), 1);
       [...pendingChunks].forEach(
         ([id, pending]) => pending.entry === entry && settle(entry, id, (p) => p.reject(error)),
       );
@@ -268,6 +276,55 @@ const relabelImage = ({ dataset, testSet = 'standard', digit, filename, target }
   return { moved: path.relative(dataPath, to).split(path.sep).join('/'), target };
 };
 
+// Sortiert ein Trainingsbild nach removed/train/img<ziffer> aus und entfernt es aus den
+// Trainings-DBs, damit kein npm run gen-dbs noetig ist. Die Worker laden die DBs danach neu.
+const removeTrainingImage = ({ dataset, digit, filename }) => {
+  validate({ dataset, mode: 'auto' });
+  if (!isDigit(digit)) throw new Error('Ungueltige Ziffer');
+  const name = path.basename(filename || '');
+  const from = safeFile(path.join(dataPath, 'imgs', dataset, 'train', `img${digit}`), name);
+  if (!from || !fs.existsSync(from)) throw new Error('Trainingsbild nicht gefunden');
+  const targetDirectory = path.join(dataPath, 'imgs', dataset, 'removed', 'train', `img${digit}`);
+  const to = safeFile(targetDirectory, name);
+  if (!to || fs.existsSync(to)) throw new Error('Im Zielordner liegt schon ein Bild mit diesem Namen');
+  fs.mkdirSync(targetDirectory, { recursive: true });
+  fs.renameSync(from, to);
+  const changed = dimensions.filter((dimension) => {
+    const file = path.join(dataPath, 'dbs', `${dataset}-db-train-${dimension}.js`);
+    const db = JSON.parse(fs.readFileSync(file, 'utf8').replace(/^module\.exports = /, ''));
+    const kept = db[digit].filter((sample) => sample.name !== name);
+    if (kept.length === db[digit].length) return false;
+    db[digit] = kept;
+    fs.writeFileSync(file, 'module.exports = ' + JSON.stringify(db));
+    delete require.cache[require.resolve(file)];
+    return true;
+  });
+  if (changed.length) retirePool();
+  return { moved: path.relative(dataPath, to).split(path.sep).join('/'), databases: changed };
+};
+
+// Baut die Trainings-DBs eines Datensatzes per gen-dbs neu auf (eigener Prozess, nutzt alle Kerne).
+const genDbsScript = path.join(projectPath, 'scripts', 'generate', 'gen-dbs.js');
+let regenerating = null;
+const regenerateDatabases = async ({ dataset }) => {
+  validate({ dataset, mode: 'auto' });
+  if (regenerating) throw new Error('DBs werden bereits generiert');
+  regenerating = new Promise((resolve, reject) =>
+    execFile(process.execPath, [genDbsScript, dataset], { cwd: projectPath }, (error, stdout, stderr) =>
+      error ? reject(new Error(stderr.trim() || error.message)) : resolve(stdout.trim()),
+    ),
+  )
+    .then((output) => {
+      dimensions.forEach(
+        (dimension) => delete require.cache[path.join(dataPath, 'dbs', `${dataset}-db-train-${dimension}.js`)],
+      );
+      retirePool();
+      return { output };
+    })
+    .finally(() => (regenerating = null));
+  return regenerating;
+};
+
 // Liefert vorab die Gesamtzahl, damit der Client trotz Batches einen Fortschritt anzeigen kann.
 const planAnalysis = ({ dataset, limit, offset, testSet = 'standard' }) => (
   validate({ dataset, mode: 'auto' }),
@@ -338,6 +395,28 @@ const handleRequest = (request, response) => {
     }
     return;
   }
+  if (request.method === 'POST' && url.pathname === '/api/remove-train') {
+    try {
+      json(
+        response,
+        200,
+        removeTrainingImage({
+          dataset: url.searchParams.get('dataset') || 'eb',
+          digit: Number(url.searchParams.get('digit')),
+          filename: url.searchParams.get('file'),
+        }),
+      );
+    } catch (error) {
+      json(response, 400, { error: error.message });
+    }
+    return;
+  }
+  if (request.method === 'POST' && url.pathname === '/api/gen-dbs') {
+    regenerateDatabases({ dataset: url.searchParams.get('dataset') || 'eb' })
+      .then((payload) => json(response, 200, payload))
+      .catch((error) => json(response, 400, { error: error.message }));
+    return;
+  }
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     response.writeHead(405, { Allow: 'GET, HEAD' });
     response.end('Method not allowed');
@@ -397,7 +476,9 @@ module.exports = {
   createServer,
   normalizePng,
   planAnalysis,
+  regenerateDatabases,
   relabelImage,
+  removeTrainingImage,
   requestParams,
   runAnalysis,
   stopWorkers,
