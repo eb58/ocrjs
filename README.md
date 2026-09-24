@@ -49,7 +49,10 @@ steht in [`scripts/README.md`](scripts/README.md).
 ## Automatische Tests
 
 ```sh
-npm test
+npm test          # Standard, läuft auch im Pre-commit-Hook
+npm run test:full # zusätzlich EB 21.09. und MNIST (dauert gut eine Minute länger)
 ```
+
+Neben den Einzeltests prüft `tests/ocr-cascade.test.js` die Trefferquote der Kaskade auf ganzen Testmengen: EB-Bestand (> 99,5 %) und Review (> 94,5 %) immer, die Menge vom 21.09. (> 99 %) und MNIST (> 97 %) nur mit `test:full`.
 
 Die kleinen PNG-Fixtures unter `tests/fixtures` sind versioniert. Der vollständige Datenbestand unter `data` bleibt über `.gitignore` ausgeschlossen.

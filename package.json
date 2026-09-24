@@ -16,6 +16,7 @@
     "format": "prettier --write src tests \"scripts/**/*.js\" visual-tests eslint.config.js",
     "format:check": "prettier --check src tests \"scripts/**/*.js\" visual-tests eslint.config.js",
     "test": "jest",
+    "test:full": "node scripts/test-full.js",
     "testWatch": "jest --watch",
     "visual-test": "node --watch src/visual-test-server.js",
     "build:wasm": "asc assembly/search.ts -o src/search.wasm -O3 --runtime stub --noAssert"
