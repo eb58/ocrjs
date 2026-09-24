@@ -108,6 +108,7 @@ const resetSettings = () => {
   Object.entries(DEFAULT_SETTINGS).forEach(([name, value]) => {
     elements[name].value = value;
   });
+  syncTestSets();
   state.status = 'all';
   state.results = [];
   state.visible = PAGE_SIZE;

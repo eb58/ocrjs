@@ -18,6 +18,7 @@ const { execFileSync } = require('child_process');
 const { PNG } = require('pngjs');
 const createImage = require('../../src/img');
 const ocrengine = require('../../src/ocr');
+const { createRejectDetector } = require('../../src/reject');
 const { loadDatabases } = require('../../src/analysis');
 
 const args = process.argv.slice(2);
@@ -195,6 +196,7 @@ const appendLog = (relPath) => fs.appendFileSync(logFile, `${relPath}\n`);
 const main = () => {
   const ffmpeg = findFfmpeg();
   const dbs = loadDatabases('eb', 'auto').map((entry) => entry.data);
+  const detectReject = createRejectDetector(dbs.at(-1));
   range(10).forEach((digit) => fs.mkdirSync(path.join(testDir, `img${digit}`), { recursive: true }));
   fs.mkdirSync(reviewDir, { recursive: true });
 
@@ -205,7 +207,7 @@ const main = () => {
     `${allTifs.length} neue Formulare gefunden, verarbeite ${tifs.length}${DRY_RUN ? ' (dry-run, es wird nichts geschrieben)' : ''}.`,
   );
 
-  const stats = { accepted: Array(10).fill(0), review: 0, skippedForms: 0, forms: 0 };
+  const stats = { accepted: Array(10).fill(0), rejected: 0, review: 0, skippedForms: 0, forms: 0 };
 
   tifs.forEach((tifFile, i) => {
     const relPath = path.relative(ROOT, tifFile);
@@ -251,13 +253,15 @@ const main = () => {
           try {
             const candidates = ocrengine.recognizeImage(glyphFile, dbs);
             const conf = ocrengine.confidence(candidates);
+            const reject = detectReject(glyphFile);
             const digit = candidates[0] && candidates[0].digit;
             const id = crypto.createHash('md5').update(relPath).digest('hex').slice(0, 10);
             const name = `pl-${id}-r${rowIdx}c${colIdx}.png`;
-            if (digit !== undefined && conf >= THRESHOLD) {
+            if (digit !== undefined && conf >= THRESHOLD && !reject.rejected) {
               stats.accepted[digit]++;
               if (!DRY_RUN) fs.copyFileSync(glyphFile, path.join(testDir, `img${digit}`, name));
             } else {
+              if (reject.rejected) stats.rejected++;
               stats.review++;
               if (!DRY_RUN) fs.copyFileSync(glyphFile, path.join(reviewDir, `guess${digit ?? 'x'}-${name}`));
             }
@@ -286,7 +290,7 @@ const main = () => {
   console.log(
     `In eb/test uebernommen: ${stats.accepted.reduce((a, b) => a + b, 0)} (${stats.accepted.map((n, d) => `${d}:${n}`).join(', ')})`,
   );
-  console.log(`Zur manuellen Pruefung in eb/review: ${stats.review}`);
+  console.log(`Zur manuellen Pruefung in eb/review: ${stats.review} (davon Ausschussverdacht: ${stats.rejected})`);
 };
 
 const range = (n) => [...Array(n).keys()];

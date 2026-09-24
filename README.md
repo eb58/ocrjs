@@ -53,6 +53,8 @@ npm test          # Standard, läuft auch im Pre-commit-Hook
 npm run test:full # zusätzlich EB 21.09. und MNIST (dauert gut eine Minute länger)
 ```
 
-Neben den Einzeltests prüft `tests/ocr-cascade.test.js` die Trefferquote der Kaskade auf ganzen Testmengen: EB-Bestand (> 99,5 %) und Review (> 94,5 %) immer, die Menge vom 21.09. (> 99 %) und MNIST (> 97 %) nur mit `test:full`.
+Neben den Einzeltests prüft `tests/ocr-cascade.test.js` die Trefferquote der Kaskade auf ganzen Testmengen: EB-Bestand (> 99,5 %) immer und MNIST (> 97 %) nur mit `test:full`. Bei Review (> 94,5 %) misst der Test lediglich die Übereinstimmung mit vorläufigen, per OCR vergebenen Ordnerlabels. Die Menge vom 21.09. (> 99 %, nur mit `test:full`) enthält ebenfalls OCR-zugeordnete Bilder. Für diese beiden Mengen ist der Gesamtwert keine unabhängige Trefferquote.
+
+Beim Import der Postlisten hält ein konservativer Ausschussdetektor Bilder zurück, deren absolute 8x6-Distanz zur EB-Trainingsmenge über 35000 liegt. Solche Bilder landen unabhängig von der relativen OCR-Konfidenz in `review`; sie werden nicht automatisch gelöscht. `npm run benchmark:reject` misst Fehlalarme auf dem regulären EB-Testbestand und die Fangquote unter den manuell aussortierten Bildern.
 
 Die kleinen PNG-Fixtures unter `tests/fixtures` sind versioniert. Der vollständige Datenbestand unter `data` bleibt über `.gitignore` ausgeschlossen.

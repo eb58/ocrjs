@@ -6,10 +6,12 @@ const cascadeAccuracy = async (dataset, testSet = 'standard') => {
   const { results, durationMs } = await runAnalysis({ dataset, testSet, limit: 0, offset: 0, mode: 'auto' });
   const correct = results.filter((result) => result.correct).length;
   const accuracy = correct / results.length;
+  const provisional = testSet === 'review' || testSet === '2026-09-21';
   // Direkt auf stderr, weil Jest console.log im Parallellauf ohne --verbose verschluckt.
   process.stderr.write(
-    `\nKaskade ${dataset}${testSet === 'standard' ? '' : `/${testSet}`}: ${(accuracy * 100).toFixed(2)}% korrekt ` +
-      `(${correct}/${results.length}, ${results.length - correct} Fehler, ${(durationMs / 1000).toFixed(1)}s)\n`,
+    `\nKaskade ${dataset}${testSet === 'standard' ? '' : `/${testSet}`}: ${(accuracy * 100).toFixed(2)}% ` +
+      `${provisional ? 'Übereinstimmung mit teils vorläufigen Ordnerlabels' : 'korrekt'} ` +
+      `(${correct}/${results.length}, ${results.length - correct} ${provisional ? 'Abweichungen' : 'Fehler'}, ${(durationMs / 1000).toFixed(1)}s)\n`,
   );
   return accuracy;
 };
@@ -22,8 +24,9 @@ test('cascade over the EB test set', async () => {
   expect(await cascadeAccuracy('eb')).toBeGreaterThan(0.995);
 }, 600000);
 
-// Nachsortierte, schwierige Faelle; die Schwelle liegt knapp unter dem Stand vom 24.09.2026 (95,2 %).
-test('cascade over the EB review set', async () => {
+// Review-Ordner wurden per OCR befuellt und nicht unabhaengig geprueft.
+// Dieser Test misst nur die Stabilitaet der vorlaeufigen Ordnerzuordnung.
+test('cascade agreement with provisional EB review labels', async () => {
   expect(await cascadeAccuracy('eb', 'review')).toBeGreaterThan(0.945);
 }, 600000);
 

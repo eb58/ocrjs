@@ -10,6 +10,7 @@
   "description": "ocr for handwritten digits",
   "scripts": {
     "gen-dbs": "node scripts/generate/gen-dbs",
+    "benchmark:reject": "node scripts/benchmark-reject.js",
     "gen-images-from-mnist": "node scripts/generate/gen-images-from-mnist",
     "prepare": "git config core.hooksPath .githooks",
     "lint": "eslint .",

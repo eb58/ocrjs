@@ -541,6 +541,7 @@ dialog::backdrop {
   color: var(--danger);
 }
 .animate-button {
+  margin-left: auto;
   color: var(--accent);
   border-color: var(--accent);
 }
