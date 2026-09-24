@@ -56,10 +56,13 @@ test('falls back to the complete EB search when raster votes remain ambiguous', 
   expect(result.prediction).toBe(9);
 });
 
+// Ueber die ganze Kaskade statt ein einzelnes Raster: 7x5 allein steht etwa bei digit-5-a
+// auf der Kippe (Konfidenz ~1,0), entscheidend ist, was die Rasterfolge liefert.
+const allDatabases = loadDatabases('eb', 'auto');
 test.each(fixtures)('recognizes %s through the complete PNG pipeline', (filename, expected) => {
-  const result = ocrengine.recognizeImage(path.join(fixtureDir, filename), [database]);
+  const result = analyzeImage(path.join(fixtureDir, filename), expected, 'eb', allDatabases);
 
-  expect(result[0].digit).toBe(expected);
+  expect(result.prediction).toBe(expected);
 });
 
 test.each(fixtures)('names a training image for every candidate of %s', (filename) => {

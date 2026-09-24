@@ -12,7 +12,7 @@ Vor jedem neuen Commit `git status` prüfen. Fremde Arbeitsbaumänderungen, insb
 
 `src/ocr.js` verwendet pro Rasterdimension (6×4, 7×5, 8×6) mehrere Metriken: einfachen quadratischen Zellabstand, geglättete Zellenmetrik sowie zeilenweise, spaltenweise und zweidimensionale lokale Fensterabstände.
 
-Unsichere Metriken werden über `vote()` kombiniert. Die bereinigte Bildansicht (`extractGlyph`) wird als zweite Sicht verwendet, wenn die primäre Sicht nicht sicher ist.
+Unsichere Metriken werden über `vote()` kombiniert. Die geglättete Metrik stimmt dabei nur mit Gewicht 0,75 ab (Konfidenz hoch 0,75): Sie verwischt kleine Formunterschiede, etwa den leicht offenen Bogen einer 9 gegenüber dem Haken einer 5, und überstimmte sonst die anderen Metriken. Messung vom 24.09.2026 über EB, Review, EB 21.09. und MNIST: 429 → 424 Fehler; mit Gewicht 0 waren es 498, ganz ohne die Metrik 500, mit Gewicht 0,5 445. Im Prüfstand zeigt die Animation die Stimme jeder Metrik pro Raster. Die bereinigte Bildansicht (`extractGlyph`) wird als zweite Sicht verwendet, wenn die primäre Sicht nicht sicher ist.
 
 Eine wichtige Korrektur: Eine hohe Konfidenz, die erst durch die Abstimmung mehrerer unsicherer Metriken entsteht, darf nicht automatisch wie ein sicheres Einzelmetrik-Ergebnis behandelt werden. Sonst kann ein grobes 6×4-Raster eine falsche `1 → 7` mit hoher Konfidenz festschreiben. Der Hard Case liegt unter `tests/fixtures/hard-cases/1-vs-7-coarse-grid-coincidence.png`.
 

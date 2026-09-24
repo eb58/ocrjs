@@ -183,7 +183,7 @@ const buildCandidate = (candidate, index) => {
       {},
       el('small', { textContent: `Kandidat ${index + 1}` }),
       el('strong', { textContent: candidate.digit }),
-      el('span', { textContent: `Distanz ${candidate.distance}` }),
+      el('span', { textContent: `Distanz ${candidate.distance.toFixed(3)}` }),
     ),
   );
   if (candidate.name) article.append(buildTrash(candidate, article));
@@ -380,6 +380,24 @@ const renderTraceStep = (container, step, result, index, total) => {
       : step.candidates?.length
         ? el('div', { className: 'trace-candidates' }, ...step.candidates.map(buildCandidate))
         : el('div', { className: 'trace-fallback-icon', textContent: '128 → alle' });
+  const measureList = step.measures?.length
+    ? el(
+        'div',
+        { className: 'trace-votes trace-measures' },
+        el('strong', { textContent: `Abstandsmaße ${step.dimension}` }),
+        ...step.measures.map((measure) =>
+          el(
+            'span',
+            { className: measure.secure ? 'secure' : '' },
+            el('b', { textContent: measure.view === 'Primär' ? measure.measure : `${measure.measure} (bereinigt)` }),
+            el('b', { textContent: measure.digit === undefined ? '–' : `Ziffer ${measure.digit}` }),
+            el('small', {
+              textContent: `Konfidenz ${measure.confidence.toFixed(2)}${measure.secure ? ' · sicher' : ''}`,
+            }),
+          ),
+        ),
+      )
+    : '';
   container.replaceChildren(
     progress,
     el(
@@ -394,6 +412,7 @@ const renderTraceStep = (container, step, result, index, total) => {
       ),
     ),
     candidateList,
+    measureList,
   );
 };
 

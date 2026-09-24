@@ -62,7 +62,8 @@ const analyzeImage = (file, expected, dataset, databases, secureThreshold = SECU
   const group = path.basename(path.dirname(path.dirname(file)));
   let secure;
   for (const { dimension, data } of databases) {
-    const candidates = recognize(data);
+    const measures = trace ? [] : undefined;
+    const candidates = recognize(data, measures);
     const candidateConfidence = confidence(candidates);
     const threshold = secureThresholdFor(data.dimr, data.dimc, secureThreshold);
     attempts.push(candidates);
@@ -72,6 +73,7 @@ const analyzeImage = (file, expected, dataset, databases, secureThreshold = SECU
         candidates: candidateResults(candidates.slice(0, 3), dataset),
         confidence: candidateConfidence,
         dimension,
+        measures,
         queryImage: queryImageUrl(dimension, group, dataset, expected, filename),
         search: options.candidateLimit ? 'optimized' : 'full',
         threshold,
