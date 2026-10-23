@@ -8,7 +8,7 @@
 // zur manuellen Pruefung in data/imgs/eb/review statt das Testset zu verunreinigen.
 //
 // Aufruf: node scripts/import/extract-postlisten-digits.js [--root <ordner>] [--limit n]
-//         [--threshold n] [--dry-run]
+//         [--threshold n] [--dataset name] [--output-set name] [--review-set name] [--dedupe-eb] [--dry-run]
 
 const fs = require('fs');
 const os = require('os');
@@ -18,7 +18,7 @@ const { execFileSync } = require('child_process');
 const { PNG } = require('pngjs');
 const createImage = require('../../src/img');
 const ocrengine = require('../../src/ocr');
-const { createRejectDetector } = require('../../src/reject');
+const { createRejectDetector, vectorize } = require('../../src/reject');
 const { loadDatabases } = require('../../src/analysis');
 
 const args = process.argv.slice(2);
@@ -31,12 +31,28 @@ const ROOT = flag('root', DEFAULT_ROOT);
 const ROOT_IS_DEFAULT = ROOT === DEFAULT_ROOT;
 const LIMIT = Number(flag('limit', Infinity));
 const THRESHOLD = Number(flag('threshold', 3.0));
+const DATASET = flag('dataset', 'eb');
+const OUTPUT_SET = flag('output-set', 'test');
+const REVIEW_SET = flag('review-set', 'review');
+const DEDUPE_EB = args.includes('--dedupe-eb');
 const DRY_RUN = args.includes('--dry-run');
+const SHARD_INDEX = Number(flag('shard-index', 0));
+const SHARD_COUNT = Number(flag('shard-count', 1));
+if (
+  !Number.isInteger(SHARD_INDEX) ||
+  !Number.isInteger(SHARD_COUNT) ||
+  SHARD_COUNT < 1 ||
+  SHARD_INDEX < 0 ||
+  SHARD_INDEX >= SHARD_COUNT
+) {
+  throw new RangeError('Ungueltige Shard-Angabe');
+}
 
 const dataPath = path.resolve(__dirname, '../../data');
-const testDir = path.join(dataPath, 'imgs', 'eb', 'test');
-const reviewDir = path.join(dataPath, 'imgs', 'eb', 'review');
-const logFile = path.join(dataPath, 'imgs', 'eb', 'postlisten-extract.log');
+const outputDir = path.join(dataPath, 'imgs', DATASET, OUTPUT_SET);
+const reviewDir = path.join(dataPath, 'imgs', DATASET, REVIEW_SET);
+const shardSuffix = SHARD_COUNT > 1 ? `-shard-${SHARD_INDEX}-of-${SHARD_COUNT}` : '';
+const logFile = path.join(dataPath, 'imgs', DATASET, `postlisten-extract-${OUTPUT_SET}${shardSuffix}.log`);
 
 // In allen Beispielen identisch positioniert (siehe Untersuchung an Formularen aus
 // TestListenH_A und TestListenH_C): zwei handschriftliche Zahlenzeilen unterhalb von
@@ -50,14 +66,17 @@ const COL_MIN_GAP = 9; // Spalten mit >= soviel leeren Pixelspalten dazwischen t
 const COL_MIN_WIDTH = 5;
 const GLYPH_MARGIN = 8;
 
-const findFfmpeg = () => {
+const findTiffConverter = () => {
   try {
     execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' });
-    return 'ffmpeg';
+    return { command: 'ffmpeg', type: 'ffmpeg' };
   } catch {
-    throw new Error(
-      'ffmpeg wurde nicht gefunden (wird zur TIFF->PNG-Konvertierung benoetigt). Bitte installieren und in PATH aufnehmen.',
-    );
+    try {
+      execFileSync('python', ['-c', 'from PIL import Image'], { stdio: 'ignore' });
+      return { command: 'python', type: 'pillow' };
+    } catch {
+      throw new Error('Weder ffmpeg noch Python/Pillow wurde zur TIFF->PNG-Konvertierung gefunden.');
+    }
   }
 };
 
@@ -90,10 +109,52 @@ const findTifFiles = (root) => {
   return results;
 };
 
-const tifToPng = (ffmpeg, tifFile) => {
+const tifToPng = (converter, tifFile) => {
   const outFile = path.join(os.tmpdir(), `plx-${crypto.randomBytes(8).toString('hex')}.png`);
-  execFileSync(ffmpeg, ['-y', '-i', tifFile, '-update', '1', '-frames:v', '1', outFile], { stdio: 'ignore' });
+  if (converter.type === 'ffmpeg') {
+    try {
+      execFileSync(converter.command, ['-y', '-i', tifFile, '-update', '1', '-frames:v', '1', outFile], {
+        stdio: 'ignore',
+      });
+      return outFile;
+    } catch {
+      fs.rmSync(outFile, { force: true });
+    }
+  }
+  execFileSync(
+    'python',
+    [
+      '-c',
+      'from PIL import Image; import sys; im=Image.open(sys.argv[1]); im.seek(0); im.convert("RGBA").save(sys.argv[2])',
+      tifFile,
+      outFile,
+    ],
+    { stdio: 'ignore' },
+  );
   return outFile;
+};
+
+const vectorKey = (values) => values.join(',');
+const pngFiles = (directory) => {
+  if (!fs.existsSync(directory)) return [];
+  return fs
+    .readdirSync(directory, { recursive: true, withFileTypes: true })
+    .flatMap((entry) =>
+      entry.isFile() && entry.name.toLowerCase().endsWith('.png') ? [path.join(entry.parentPath, entry.name)] : [],
+    );
+};
+const loadKnownEb = (db) => {
+  const known = new Set(range(10).flatMap((digit) => db[digit].map(({ imgvec }) => vectorKey(imgvec))));
+  pngFiles(path.join(dataPath, 'imgs', 'eb'))
+    .filter((file) => !file.includes(`${path.sep}train${path.sep}`))
+    .forEach((file) => {
+      try {
+        known.add(vectorKey(vectorize(file)));
+      } catch (error) {
+        console.error(`Bekanntes Bild nicht lesbar (${file}): ${error.message}`);
+      }
+    });
+  return known;
 };
 
 // img.js exponiert Breite/Hoehe nicht in seiner oeffentlichen API (nur imgdata) - daher wird
@@ -194,26 +255,30 @@ const loadProcessedLog = () =>
 const appendLog = (relPath) => fs.appendFileSync(logFile, `${relPath}\n`);
 
 const main = () => {
-  const ffmpeg = findFfmpeg();
+  const converter = findTiffConverter();
   const dbs = loadDatabases('eb', 'auto').map((entry) => entry.data);
   const detectReject = createRejectDetector(dbs.at(-1));
-  range(10).forEach((digit) => fs.mkdirSync(path.join(testDir, `img${digit}`), { recursive: true }));
+  const known = DEDUPE_EB ? loadKnownEb(dbs.at(-1)) : new Set();
+  range(10).forEach((digit) => fs.mkdirSync(path.join(outputDir, `img${digit}`), { recursive: true }));
   fs.mkdirSync(reviewDir, { recursive: true });
 
   const processed = loadProcessedLog();
-  const allTifs = findTifFiles(ROOT).filter((file) => !processed.has(path.relative(ROOT, file)));
+  const allTifs = findTifFiles(ROOT)
+    .sort()
+    .filter((_, index) => index % SHARD_COUNT === SHARD_INDEX)
+    .filter((file) => !processed.has(path.relative(ROOT, file)));
   const tifs = allTifs.slice(0, LIMIT);
   console.log(
     `${allTifs.length} neue Formulare gefunden, verarbeite ${tifs.length}${DRY_RUN ? ' (dry-run, es wird nichts geschrieben)' : ''}.`,
   );
 
-  const stats = { accepted: Array(10).fill(0), rejected: 0, review: 0, skippedForms: 0, forms: 0 };
+  const stats = { accepted: Array(10).fill(0), duplicates: 0, rejected: 0, review: 0, skippedForms: 0, forms: 0 };
 
   tifs.forEach((tifFile, i) => {
     const relPath = path.relative(ROOT, tifFile);
     let pngFile;
     try {
-      pngFile = tifToPng(ffmpeg, tifFile);
+      pngFile = tifToPng(converter, tifFile);
       const source = PNG.sync.read(fs.readFileSync(pngFile));
       const page = createImage().frompng(source).adjustBW();
       const region = cropRect(
@@ -255,12 +320,17 @@ const main = () => {
             const conf = ocrengine.confidence(candidates);
             const reject = detectReject(glyphFile);
             const digit = candidates[0] && candidates[0].digit;
+            const key = vectorKey(reject.query || vectorize(glyphFile));
             const id = crypto.createHash('md5').update(relPath).digest('hex').slice(0, 10);
             const name = `pl-${id}-r${rowIdx}c${colIdx}.png`;
-            if (digit !== undefined && conf >= THRESHOLD && !reject.rejected) {
+            if (known.has(key)) {
+              stats.duplicates++;
+            } else if (digit !== undefined && conf >= THRESHOLD && !reject.rejected) {
               stats.accepted[digit]++;
-              if (!DRY_RUN) fs.copyFileSync(glyphFile, path.join(testDir, `img${digit}`, name));
+              known.add(key);
+              if (!DRY_RUN) fs.copyFileSync(glyphFile, path.join(outputDir, `img${digit}`, name));
             } else {
+              known.add(key);
               if (reject.rejected) stats.rejected++;
               stats.review++;
               if (!DRY_RUN) fs.copyFileSync(glyphFile, path.join(reviewDir, `guess${digit ?? 'x'}-${name}`));
@@ -288,9 +358,12 @@ const main = () => {
     `Formulare verarbeitet: ${stats.forms}, uebersprungen (Zeilenlayout unerwartet/Fehler): ${stats.skippedForms}`,
   );
   console.log(
-    `In eb/test uebernommen: ${stats.accepted.reduce((a, b) => a + b, 0)} (${stats.accepted.map((n, d) => `${d}:${n}`).join(', ')})`,
+    `In ${DATASET}/${OUTPUT_SET} uebernommen: ${stats.accepted.reduce((a, b) => a + b, 0)} (${stats.accepted.map((n, d) => `${d}:${n}`).join(', ')})`,
   );
-  console.log(`Zur manuellen Pruefung in eb/review: ${stats.review} (davon Ausschussverdacht: ${stats.rejected})`);
+  console.log(`Bekannte/mehrfach vorkommende Glyphen ausgelassen: ${stats.duplicates}`);
+  console.log(
+    `Zur manuellen Pruefung in ${DATASET}/${REVIEW_SET}: ${stats.review} (davon Ausschussverdacht: ${stats.rejected})`,
+  );
 };
 
 const range = (n) => [...Array(n).keys()];

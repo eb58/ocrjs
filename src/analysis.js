@@ -6,7 +6,7 @@ const { SECURE_CONFIDENCE, confidence, vote } = ocrengine;
 const dataPath = path.join(path.resolve(__dirname, '..'), 'data');
 const datasets = new Set(['eb', 'mnist']);
 const testSets = {
-  eb: { standard: 'test', '2026-09-21': 'test-2026-09-21', review: 'review' },
+  eb: { standard: 'test', '2026-09-21': 'test-2026-09-21', handlisten: 'test-handlisten', review: 'review' },
   mnist: { standard: 'test' },
 };
 const dimensions = ['6x4', '7x5', '8x6'];
